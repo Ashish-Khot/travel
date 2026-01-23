@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import { styled, useTheme, ThemeProvider, createTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
@@ -239,10 +240,10 @@ const MyToursPage = ({ tours, onCreateTour }) => {
   );
 };
 import BookingsDataGrid from '../components/BookingsDataGrid';
-const BookingsPage = ({ bookings }) => (
+const BookingsPage = ({ bookings, refreshBookings }) => (
   <Box>
     <Typography variant="h5" fontWeight={700} mb={3}>Bookings</Typography>
-    <BookingsDataGrid bookings={bookings} />
+    <BookingsDataGrid bookings={bookings} onStatusChange={refreshBookings} />
   </Box>
 );
 import BookingCalendar from '../components/BookingCalendar';
@@ -284,6 +285,28 @@ export default function GuideDashboard() {
   const [tours, setTours] = useState([]);
   const muiTheme = useTheme();
   const navigate = useNavigate();
+  const socketRef = useRef(null);
+
+  // Move fetchGuideData to top-level so it's available in JSX
+  const fetchGuideData = async () => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) return;
+      const userObj = JSON.parse(storedUser);
+      // Fetch guide profile
+      const profileRes = await api.get(`/guide/profile/${userObj._id}`);
+      setGuideProfile(profileRes.data.guide);
+      // Fetch bookings for this guide
+      const bookingsRes = await api.get(`/booking/guide/${userObj._id}`);
+      console.log('[DEBUG] GuideDashboard fetched bookings:', bookingsRes.data.bookings);
+      setBookings(bookingsRes.data.bookings);
+      // Fetch tours for this guide
+      const toursRes = await api.get(`/tour/guide/${userObj._id}`);
+      setTours(toursRes.data.tours);
+    } catch (err) {
+      console.log('[DEBUG] GuideDashboard fetch error:', err);
+    }
+  };
 
   useEffect(() => {
     // Get user from localStorage
@@ -298,23 +321,29 @@ export default function GuideDashboard() {
       return;
     }
     setUser(userObj);
-    // Fetch guide profile, bookings, and tours
-    const fetchGuideData = async () => {
-      try {
-        // Fetch guide profile
-        const profileRes = await api.get(`/guide/profile`);
-        setGuideProfile(profileRes.data.guide);
-        // Fetch bookings for this guide
-        const bookingsRes = await api.get(`/booking/guide/${userObj._id}`);
-        setBookings(bookingsRes.data.bookings);
-        // Fetch tours for this guide
-        const toursRes = await api.get(`/tour/guide/${userObj._id}`);
-        setTours(toursRes.data.tours);
-      } catch (err) {
-        // handle error (optional: show error message)
+    fetchGuideData();
+
+    // Setup socket connection for real-time booking updates
+    if (!socketRef.current) {
+      socketRef.current = io('http://localhost:3001');
+    }
+    const socket = socketRef.current;
+    // Join guide room for real-time updates
+    socket.emit('joinGuideRoom', { guideId: userObj._id });
+    // Listen for booking updates
+    socket.on('bookingUpdate', (data) => {
+      // Only refresh if the update is for this guide
+      if (data && data.guideId === userObj._id) {
+        console.log('[DEBUG] Received bookingUpdate event:', data);
+        fetchGuideData();
+      }
+    });
+    return () => {
+      if (socket) {
+        socket.off('bookingUpdate');
+        socket.disconnect();
       }
     };
-    fetchGuideData();
   }, [navigate]);
 
   // ProfilePage now uses guideProfile
@@ -416,7 +445,7 @@ export default function GuideDashboard() {
   const pageMap = {
     Dashboard: <DashboardPage user={user} bookings={bookings} guideProfile={guideProfile} tours={tours} />,
     'My Tours': <MyToursPage tours={tours} onCreateTour={handleCreateTour} />,
-    Bookings: <BookingsPage bookings={bookings} />,
+     Bookings: <BookingsPage bookings={bookings} refreshBookings={fetchGuideData} />,
     Calendar: <CalendarPage />,
     Messages: <MessagesPage />,
     Earnings: <EarningsPage />,

@@ -37,6 +37,45 @@ router.post('/review', verifyToken, authorizeRoles('tourist'), async (req, res) 
   }
 });
 
+// Delete review (by owner or admin)
+router.delete('/review/:id', verifyToken, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    // Only owner or admin can delete
+    if (review.userId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    await review.deleteOne();
+    res.json({ message: 'Review deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// Admin approves/rejects review
+router.put('/review/:id/moderate', verifyToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    const { status } = req.body; // 'approved' or 'rejected'
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    review.status = status;
+    await review.save();
+    // If approved, update guide's average rating
+    if (status === 'approved') {
+      const reviews = await Review.find({ guideId: review.guideId, status: 'approved' });
+      const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+      await Guide.findOneAndUpdate({ userId: review.guideId }, { ratings: avgRating });
+    }
+    res.json({ message: `Review ${status}`, review });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // Edit review (within 24h, only if pending)
 router.put('/review/:id', verifyToken, authorizeRoles('tourist'), async (req, res) => {
   try {
@@ -59,6 +98,7 @@ router.put('/review/:id', verifyToken, authorizeRoles('tourist'), async (req, re
   }
 });
 
+
 // Fetch all reviews for a guide (only approved)
 router.get('/guide/:id/reviews', async (req, res) => {
   try {
@@ -71,21 +111,10 @@ router.get('/guide/:id/reviews', async (req, res) => {
 });
 
 // Fetch all reviews by a user
-router.get('/user/:id', verifyToken, async (req, res) => {
+router.get('/user/:id/reviews', verifyToken, async (req, res) => {
   try {
-    if (req.user.userId !== req.params.id) return res.status(403).json({ message: 'Forbidden' });
+    if (req.user.userId !== req.params.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
     const reviews = await Review.find({ userId: req.params.id });
-    res.json({ reviews });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
-
-// Fetch all reviews for a guide
-router.get('/guide/:id/reviews', async (req, res) => {
-  try {
-    const guideId = req.params.id;
-    const reviews = await Review.find({ guideId }).populate('userId', 'name avatar');
     res.json({ reviews });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

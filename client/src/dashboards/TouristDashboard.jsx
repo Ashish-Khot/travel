@@ -15,7 +15,7 @@ import TrendingTravelogues from './components/TrendingTravelogues';
 import UpcomingTripsCard from './components/UpcomingTripsCard';
 import ExploreGuides from './components/ExploreGuides';
 import ChatPanel from './components/ChatPanel';
-import ReviewsPanel from './components/ReviewsPanel';
+import MyReviews from './components/MyReviews';
 import TravelTipsPanel from './components/TravelTipsPanel';
 import EmergencySupportPanel from './components/EmergencySupportPanel';
 import TouristProfile from './components/TouristProfile';
@@ -84,7 +84,7 @@ export default function TouristDashboard() {
           {selectedTab === 'Explore Guides' && <ExploreGuides />}
           {selectedTab === 'My Bookings' && <MyBookings />}
           {selectedTab === 'Chat' && <ChatPanel />}
-          {selectedTab === 'Reviews' && <ReviewsPanel />}
+          {selectedTab === 'Reviews' && <MyReviews />}
           {selectedTab === 'Travel Tips' && <TravelTipsPanel />}
           {selectedTab === 'Emergency' && <EmergencySupportPanel />}
           {selectedTab === 'Profile' && <TouristProfile user={user} />}

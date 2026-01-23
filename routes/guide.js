@@ -1,5 +1,6 @@
 const express = require('express');
 const Guide = require('../models/Guide');
+const Travelogue = require('../models/Travelogue');
 const User = require('../models/User');
 const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
@@ -31,12 +32,18 @@ router.post('/apply', verifyToken, authorizeRoles('guide'), async (req, res) => 
 // Get guide profile by userId (for dashboard)
 router.get('/profile/:userId', async (req, res) => {
   try {
+    console.log('[DEBUG] Fetching guide profile for userId:', req.params.userId);
     const guide = await Guide.findOne({ userId: req.params.userId })
       .populate('travelogues')
       .populate('bookings');
-    if (!guide) return res.status(404).json({ message: 'Guide profile not found' });
+    if (!guide) {
+      console.log('[DEBUG] Guide profile not found for userId:', req.params.userId);
+      return res.status(404).json({ message: 'Guide profile not found' });
+    }
     res.json({ guide });
   } catch (err) {
+    console.log('[DEBUG] Error in /profile/:userId:', err);
+    if (err && err.stack) console.log(err.stack);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
