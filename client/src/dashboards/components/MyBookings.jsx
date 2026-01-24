@@ -5,12 +5,15 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Modal from '@mui/material/Modal';
+import ChatPanel from './ChatPanel';
 import TextField from '@mui/material/TextField';
 import Button from '../../common/Button';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 
 export default function MyBookings() {
+  const [openChat, setOpenChat] = useState(false);
+  const [chatBookingId, setChatBookingId] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [openEdit, setOpenEdit] = useState(false);
@@ -132,16 +135,26 @@ export default function MyBookings() {
               <Box sx={{ textAlign: 'right' }}>
                 <Typography fontWeight={700} color="green" fontSize={22}>${booking.price || 0}</Typography>
                 <Typography fontSize={13} color="text.secondary">Total Price</Typography>
-                {/* Edit/Delete buttons for pending/cancelled bookings */}
-                {(booking.status === 'pending' || booking.status === 'cancelled') && (
-                  <Box mt={2} sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={() => handleOpenEdit(booking)} className="bg-yellow-500 hover:bg-yellow-600">Edit</Button>
-                    <Button onClick={() => handleOpenDelete(booking._id)} className="bg-red-600 hover:bg-red-700">Delete</Button>
-                  </Box>
-                )}
+                <Box mt={2} sx={{ display: 'flex', gap: 1 }}>
+                  <Button onClick={() => { setChatBookingId(booking._id); setOpenChat(true); }} className="bg-green-600 hover:bg-green-700">Chat</Button>
+                  {(booking.status === 'pending' || booking.status === 'cancelled') && (
+                    <>
+                      <Button onClick={() => handleOpenEdit(booking)} className="bg-yellow-500 hover:bg-yellow-600">Edit</Button>
+                      <Button onClick={() => handleOpenDelete(booking._id)} className="bg-red-600 hover:bg-red-700">Delete</Button>
+                    </>
+                  )}
+                </Box>
               </Box>
             </Box>
           ))}
+          {/* Chat Modal */}
+          <Modal open={openChat} onClose={() => setOpenChat(false)}>
+            <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: '#f8fdf7', borderRadius: 2, boxShadow: 4, p: 0, minWidth: 700, minHeight: 500 }}>
+              {openChat && chatBookingId && (
+                <ChatPanel bookingId={chatBookingId} />
+              )}
+            </Box>
+          </Modal>
           {/* Edit Booking Modal */}
           <Modal open={openEdit} onClose={() => setOpenEdit(false)}>
             <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: '#fff', borderRadius: 2, boxShadow: 4, p: 3, minWidth: 320 }}>

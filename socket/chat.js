@@ -13,26 +13,61 @@ function setupSocket(server) {
 
   io.on('connection', (socket) => {
     // For chat rooms (per Chat model, guide-tourist pair)
-    socket.on('joinChatRoom', ({ guideId, touristId }) => {
-      const room = `chat_${guideId}_${touristId}`;
-      socket.join(room);
+
+    // Join chat room by chatId (for direct chat)
+    socket.on('joinRoom', async ({ chatId, userId }) => {
+      const chat = await Chat.findById(chatId);
+      if (chat && (chat.touristId.toString() === userId || chat.guideId.toString() === userId)) {
+        socket.join(`chat_${chatId}`);
+      }
     });
 
-    socket.on('chatMessage', async ({ guideId, touristId, senderId, content }) => {
-      const message = {
-        sender: senderId,
-        text: content,
-        sentAt: new Date()
+    // Typing indicator
+    socket.on('typing', ({ bookingId, userId }) => {
+      socket.to(`chat_${bookingId}`).emit('typing', { userId });
+    });
+
+    // Send chat message (with access and status enforcement)
+    socket.on('chatMessage', async ({ chatId, senderId, content, messageType = 'TEXT', senderRole }) => {
+      const chat = await Chat.findById(chatId);
+      if (!chat) return;
+      if (![chat.touristId.toString(), chat.guideId.toString()].includes(senderId)) return;
+      // Content filter
+      const containsPersonalInfo = (content) => {
+        const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+        const phoneRegex = /\b\d{10,}\b/;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return emailRegex.test(content) || phoneRegex.test(content) || urlRegex.test(content);
       };
-      // Save message to Chat model
-      let chat = await Chat.findOne({ guideId, touristId });
-      if (!chat) {
-        chat = new Chat({ guideId, touristId, messages: [] });
-      }
-      chat.messages.push(message);
-      await chat.save();
-      const room = `chat_${guideId}_${touristId}`;
-      io.to(room).emit('newMessage', message);
+      if (containsPersonalInfo(content)) return;
+      // Rate limiting (max 5 messages in 10s)
+      const Message = require('../models/Message');
+      const since = require('moment')().subtract(10, 'seconds').toDate();
+      const recentCount = await Message.countDocuments({
+        chatId: chat._id,
+        senderId,
+        createdAt: { $gte: since }
+      });
+      if (recentCount >= 5) return;
+      // Save message
+      const msg = await Message.create({
+        chatId: chat._id,
+        senderId,
+        senderRole,
+        messageType,
+        content,
+        isRead: false
+      });
+      io.to(`chat_${chatId}`).emit('newMessage', msg);
+    });
+
+    // Read receipt
+    socket.on('readMessages', async ({ bookingId, userId }) => {
+      const chat = await Chat.findOne({ bookingId });
+      if (!chat) return;
+      const Message = require('../models/Message');
+      await Message.updateMany({ chatId: chat._id, isRead: false, senderId: { $ne: userId } }, { isRead: true });
+      io.to(`chat_${bookingId}`).emit('messagesRead', { userId });
     });
 
     // For guide dashboard real-time booking updates

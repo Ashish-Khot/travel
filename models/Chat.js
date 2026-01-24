@@ -1,35 +1,34 @@
 const mongoose = require('mongoose');
 
+
 const ChatSchema = new mongoose.Schema({
-  guideId: {
+  bookingId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'Booking',
+    required: true,
+    unique: true
   },
   touristId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  messages: [
-    {
-      sender: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-      },
-      text: {
-        type: String,
-        required: true
-      },
-      sentAt: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ]
+  guideId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['ACTIVE', 'POST_TOUR', 'CLOSED', 'LOCKED'],
+    default: 'ACTIVE',
+    required: true
+  },
+  postTourExpiry: {
+    type: Date,
+    default: null
+  }
 }, { timestamps: true });
 
-ChatSchema.index({ guideId: 1, touristId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Chat', ChatSchema);

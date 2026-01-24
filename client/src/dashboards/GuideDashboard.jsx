@@ -188,6 +188,31 @@ function DashboardPage({ user, bookings, guideProfile, tours }) {
 }
 
 // --- My Tours with Create Tour ---
+// Placeholder for missing components
+function TourCard(props) {
+  return (
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+      <Typography variant="h6">TourCard Placeholder</Typography>
+      <Typography variant="body2">Tour info: {JSON.stringify(props)}</Typography>
+    </Box>
+  );
+}
+
+function EarningsCharts() {
+  return (
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+      <Typography variant="h6">EarningsCharts Placeholder</Typography>
+    </Box>
+  );
+}
+
+function ReviewsList() {
+  return (
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+      <Typography variant="h6">ReviewsList Placeholder</Typography>
+    </Box>
+  );
+}
 const MyToursPage = ({ tours, onCreateTour }) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', price: '', duration: '', image: '' });
@@ -253,39 +278,10 @@ const CalendarPage = () => (
     <BookingCalendar />
   </Box>
 );
-import MessagesPanel from '../components/MessagesPanel';
-const MessagesPage = () => (
-  <Box>
-    <Typography variant="h5" fontWeight={700} mb={3}>Messages</Typography>
-    <MessagesPanel />
-  </Box>
-);
-import EarningsCharts from '../components/EarningsCharts';
-const EarningsPage = () => (
-  <Box>
-    <Typography variant="h5" fontWeight={700} mb={3}>Earnings</Typography>
-    <EarningsCharts />
-  </Box>
-);
-import ReviewsList from '../components/ReviewsList';
-const ReviewsPage = () => (
-  <Box>
-    <Typography variant="h5" fontWeight={700} mb={3}>Reviews</Typography>
-    <ReviewsList />
-  </Box>
-);
-import api from '../api';
+import GuideChatPanel from './components/GuideChatPanel';
 
 export default function GuideDashboard() {
-  const [open, setOpen] = useState(true);
-  const [selected, setSelected] = useState('Dashboard');
-  const [user, setUser] = useState(null);
-  const [guideProfile, setGuideProfile] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [tours, setTours] = useState([]);
-  const muiTheme = useTheme();
-  const navigate = useNavigate();
-  const socketRef = useRef(null);
+// ...existing code...
 
   // Move fetchGuideData to top-level so it's available in JSX
   const fetchGuideData = async () => {
@@ -453,6 +449,29 @@ export default function GuideDashboard() {
     Profile: <ProfilePage />,
     Settings: <SettingsPage />,
   };
+
+  // Debug logging
+  console.log('GuideDashboard user:', user);
+  console.log('GuideDashboard guideProfile:', guideProfile);
+  console.log('GuideDashboard selected:', selected);
+
+  // Loading state
+  if (!user) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <Typography variant="h5">Loading user...</Typography>
+      </Box>
+    );
+  }
+
+  // Error/fallback state
+  if (!pageMap[selected]) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <Typography variant="h5" color="error">Invalid dashboard section: {selected}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
