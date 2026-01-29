@@ -1,4 +1,24 @@
+// Placeholder for EarningsPage
+function EarningsPage() {
+  return (
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+      <Typography variant="h6">EarningsPage Placeholder</Typography>
+      <Typography variant="body2">This is where earnings data will appear.</Typography>
+    </Box>
+  );
+}
+
+// Placeholder for ReviewsPage
+function ReviewsPage() {
+  return (
+    <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: 2, boxShadow: 1 }}>
+      <Typography variant="h6">ReviewsPage Placeholder</Typography>
+      <Typography variant="body2">This is where reviews will appear.</Typography>
+    </Box>
+  );
+}
 import React, { useState, useEffect, useRef } from 'react';
+import api from '../api';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import { styled, useTheme, ThemeProvider, createTheme } from '@mui/material/styles';
@@ -278,9 +298,25 @@ const CalendarPage = () => (
     <BookingCalendar />
   </Box>
 );
+
 import GuideChatPanel from './components/GuideChatPanel';
 
+// Placeholder for MessagesPage
+function MessagesPage({ user }) {
+  return user ? <GuideChatPanel guideId={user._id} /> : null;
+}
+
+
+
 export default function GuideDashboard() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [guideProfile, setGuideProfile] = useState(null);
+  const [tours, setTours] = useState([]);
+  const [selected, setSelected] = useState('Dashboard');
+  const [open, setOpen] = useState(true);
+  const socketRef = useRef(null);
 // ...existing code...
 
   // Move fetchGuideData to top-level so it's available in JSX
@@ -441,9 +477,9 @@ export default function GuideDashboard() {
   const pageMap = {
     Dashboard: <DashboardPage user={user} bookings={bookings} guideProfile={guideProfile} tours={tours} />,
     'My Tours': <MyToursPage tours={tours} onCreateTour={handleCreateTour} />,
-     Bookings: <BookingsPage bookings={bookings} refreshBookings={fetchGuideData} />,
+    Bookings: <BookingsPage bookings={bookings} refreshBookings={fetchGuideData} />,
     Calendar: <CalendarPage />,
-    Messages: <MessagesPage />,
+    Messages: <MessagesPage user={user} />,
     Earnings: <EarningsPage />,
     Reviews: <ReviewsPage />,
     Profile: <ProfilePage />,
@@ -491,7 +527,7 @@ export default function GuideDashboard() {
                     px: 2.5,
                     borderRadius: 2,
                     my: 0.5,
-                    background: selected === item.label ? alpha(muiTheme.palette.primary.main, 0.08) : 'none',
+                    background: selected === item.label ? alpha(theme.palette.primary.main, 0.08) : 'none',
                     transition: 'background 0.2s',
                   }}
                   selected={selected === item.label}
@@ -508,7 +544,7 @@ export default function GuideDashboard() {
         </Drawer>
         {/* Main Content */}
         <Box sx={{ flex: 1, marginLeft: `${drawerWidth}px`, width: `calc(100% - ${drawerWidth}px)`, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <AppBar position="fixed" open={open} elevation={0} color="inherit" sx={{ left: `${drawerWidth}px`, width: `calc(100% - ${drawerWidth}px)`, backdropFilter: 'blur(8px)', background: glassBg(muiTheme) }}>
+          <AppBar position="fixed" open={open} elevation={0} color="inherit" sx={{ left: `${drawerWidth}px`, width: `calc(100% - ${drawerWidth}px)`, backdropFilter: 'blur(8px)', background: glassBg(theme) }}>
             <Toolbar>
               <IconButton color="inherit" aria-label="open drawer" onClick={() => setOpen(!open)} edge="start" sx={{ mr: 2 }}>
                 {open ? <ChevronLeftIcon /> : <MenuIcon />}
@@ -530,3 +566,7 @@ export default function GuideDashboard() {
     </ThemeProvider>
   );
 }
+
+
+
+

@@ -5,8 +5,8 @@ const ChatSchema = new mongoose.Schema({
   bookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking',
-    required: true,
-    unique: true
+    required: false,
+    unique: false
   },
   touristId: {
     type: mongoose.Schema.Types.ObjectId,

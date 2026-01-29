@@ -37,14 +37,47 @@ export default function ChatPanel() {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Fetch user and guides
+  // Fetch user and only guides with bookings for this tourist
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUser(JSON.parse(storedUser));
-    api.get('/guide').then(res => {
-      setGuides(res.data.guides || []);
-      setFilteredGuides(res.data.guides || []);
-    });
+    // Only show guides with bookings for this tourist
+    const tourist = storedUser ? JSON.parse(storedUser) : null;
+    if (tourist && tourist.role === 'tourist') {
+      api.get(`/booking/tourist/${tourist.userId || tourist._id}`)
+        .then(res => {
+          // Extract unique guides from bookings
+          // Flatten guideId and fallback to booking fields if needed
+          const guides = (res.data.bookings || [])
+            .map(b => {
+              if (b.guideId && typeof b.guideId === 'object') {
+                return {
+                  ...b.guideId,
+                  userId: b.guideId._id || b.guideId.userId,
+                  name: b.guideId.name || b.guideName || 'No Name',
+                  avatar: b.guideId.avatar || '',
+                  country: b.guideId.country || '',
+                };
+              } else {
+                return {
+                  userId: b.guideId,
+                  name: b.guideName || 'No Name',
+                  avatar: '',
+                  country: '',
+                };
+              }
+            })
+            .filter((v, i, a) => v && a.findIndex(t => t.userId === v.userId) === i);
+          setGuides(guides);
+          setFilteredGuides(guides);
+        });
+    } else {
+      // fallback: show all guides
+      api.get('/guide').then(res => {
+        setGuides(res.data.guides || []);
+        setFilteredGuides(res.data.guides || []);
+      });
+    }
   }, []);
 
   // Filter guides by search
@@ -64,15 +97,37 @@ export default function ChatPanel() {
 
   // Fetch or create chat and messages when guide is selected
   useEffect(() => {
-    if (!selectedGuide || !user) return;
+    if (!selectedGuide || !user || !selectedGuide.userId) return;
     setLoading(true);
     setError('');
-    api.get(`/chat/direct/${user.userId}/${selectedGuide.userId}`)
+    setInput('');
+    setChatId(null);
+    setMessages([]);
+    setChatStatus('ACTIVE');
+    // Always use touristId first, guideId second
+    const isTourist = user.role === 'tourist';
+    const touristId = isTourist ? (user.userId || user._id) : selectedGuide.userId;
+    const guideId = isTourist ? selectedGuide.userId : user.userId;
+    api.get(`/chat/direct/${touristId}/${guideId}`)
       .then(res => {
-        setChatId(res.data.chatId);
-        setMessages(res.data.messages || []);
-        setChatStatus(res.data.status || 'ACTIVE');
-        setLoading(false);
+        if (!res.data.chatId) {
+          setLoading(false);
+          setError('Failed to load chat.');
+          return;
+        }
+        // Only allow chat if user is a participant
+        if (
+          (user.userId === touristId || user._id === touristId || user.userId === guideId || user._id === guideId)
+        ) {
+          setChatId(res.data.chatId);
+          setMessages(res.data.messages || []);
+          setChatStatus(res.data.status || 'ACTIVE');
+          setLoading(false);
+          setError('');
+        } else {
+          setLoading(false);
+          setError('You are not allowed to access this chat.');
+        }
       })
       .catch(() => {
         setLoading(false);
@@ -81,15 +136,10 @@ export default function ChatPanel() {
   }, [selectedGuide, user]);
 
   // Fetch chat status and messages when chatId changes
-  useEffect(() => {
-    if (!chatId) return;
-    setLoading(true);
-    api.get(`/chat/${chatId}`).then(resp => {
-      setMessages(resp.data.messages || []);
-      setChatStatus(resp.data.status || 'ACTIVE');
-      setLoading(false);
-    });
-  }, [chatId]);
+  // Only fetch for booking-based chats (not direct chats)
+  // Direct chat messages are already loaded from /chat/direct/:touristId/:guideId
+  // If you want to support booking-based chat, you can check for bookingId here
+  // For now, skip this effect for direct chats
 
   // Socket.io setup for chat
   useEffect(() => {
@@ -97,7 +147,8 @@ export default function ChatPanel() {
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_URL);
     }
-    socketRef.current.emit('joinRoom', { chatId, userId: user.userId });
+    const myUserId = user.userId || user._id;
+    socketRef.current.emit('joinRoom', { chatId, userId: myUserId });
     socketRef.current.off('newMessage');
     socketRef.current.on('newMessage', (msg) => {
       setMessages(prev => [...prev, msg]);
@@ -132,20 +183,37 @@ export default function ChatPanel() {
     setIsInputDisabled(disabled);
   }, [chatStatus]);
 
+  // Prevent double send by debouncing handleSend
+  const sendingRef = useRef(false);
   const handleSend = async () => {
+    if (sendingRef.current) return;
     if (!input.trim() || !chatId || !user || isInputDisabled) return;
+    sendingRef.current = true;
     setLoading(true);
     try {
-      // Send via REST for validation, then emit via socket for real-time
-      const resp = await api.post(`/chat/${chatId}/message`, {
-        content: input,
-        messageType: 'TEXT'
-      });
-      setMessages(prev => [...prev, resp.data.message]);
+      // Determine if this is a direct chat (bookingId is null)
+      // We know it's a direct chat if the chat was loaded from /chat/direct/:touristId/:guideId
+      // So, use the same touristId and guideId logic as above
+      const isTourist = user.role === 'tourist';
+      const touristId = isTourist ? (user.userId || user._id) : selectedGuide.userId;
+      const guideId = isTourist ? selectedGuide.userId : user.userId;
+      // If selectedGuide has no bookingId, treat as direct chat
+      if (!selectedGuide?.bookingId) {
+        await api.post(`/chat/direct/${touristId}/${guideId}/message`, {
+          content: input,
+          messageType: 'TEXT'
+        });
+      } else {
+        await api.post(`/chat/${chatId}/message`, {
+          content: input,
+          messageType: 'TEXT'
+        });
+      }
+      // Do not update messages here; rely on socket event only
       if (socketRef.current) {
         socketRef.current.emit('chatMessage', {
           chatId,
-          senderId: user.userId,
+          senderId: user.userId || user._id,
           senderRole: user.role,
           content: input,
           messageType: 'TEXT'
@@ -156,6 +224,7 @@ export default function ChatPanel() {
       alert(err.response?.data?.error || 'Message failed');
     }
     setLoading(false);
+    setTimeout(() => { sendingRef.current = false; }, 250);
   };
 
   // (Removed duplicate handleSend declaration)
@@ -189,7 +258,7 @@ export default function ChatPanel() {
         <Box sx={{ flex: 1, overflowY: 'auto', px: 1, pb: 2 }}>
           {filteredGuides.map((guide) => (
             <Box
-              key={guide.userId?._id || guide.userId}
+              key={guide.userId}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -198,21 +267,16 @@ export default function ChatPanel() {
                 mb: 1,
                 borderRadius: 2,
                 cursor: 'pointer',
-                bgcolor: selectedGuide?.userId?._id === guide.userId?._id ? '#eafbe7' : 'transparent',
+                bgcolor: selectedGuide?.userId === guide.userId ? '#eafbe7' : 'transparent',
                 transition: 'background 0.2s',
                 '&:hover': { bgcolor: '#f0f7f4' }
               }}
-              onClick={() => setSelectedGuide({
-                ...guide,
-                avatar: guide.userId?.avatar || '',
-                name: guide.userId?.name || '',
-                country: guide.userId?.country || '',
-              })}
+              onClick={() => setSelectedGuide(guide)}
             >
-              <Avatar src={guide.userId?.avatar} alt={guide.userId?.name} sx={{ width: 44, height: 44, border: selectedGuide?.userId?._id === guide.userId?._id ? '2px solid #388e3c' : '2px solid #fff' }} />
+              <Avatar src={guide.avatar} alt={guide.name} sx={{ width: 44, height: 44, border: selectedGuide?.userId === guide.userId ? '2px solid #388e3c' : '2px solid #fff' }} />
               <Box>
-                <Typography fontWeight={700} fontSize={17}>{guide.userId?.name || 'No Name'}</Typography>
-                <Typography fontSize={13} color="text.secondary">{guide.userId?.country || ''}</Typography>
+                <Typography fontWeight={700} fontSize={17}>{guide.name || 'No Name'}</Typography>
+                <Typography fontSize={13} color="text.secondary">{guide.country || ''}</Typography>
               </Box>
             </Box>
           ))}
@@ -253,7 +317,8 @@ export default function ChatPanel() {
                 </Typography>
               )}
               {messages.map((msg, idx) => {
-                const isMe = msg.senderId === user?.userId;
+                const myUserId = user?.userId || user?._id;
+                const isMe = msg.senderId === myUserId;
                 return (
                   <Box key={msg._id || idx} sx={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', mb: 1 }}>
                     {!isMe && (

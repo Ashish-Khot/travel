@@ -65,6 +65,8 @@ export default function GuideChatPanel({ guideId }) {
     if (!selectedTourist || !guideId) return;
     setLoading(true);
     setError('');
+    setMessages([]);
+    setChatId(null);
     api.get(`/chat/direct/${selectedTourist._id}/${guideId}`)
       .then(res => {
         setChatId(res.data.chatId);
@@ -72,7 +74,8 @@ export default function GuideChatPanel({ guideId }) {
         setChatStatus(res.data.status || 'ACTIVE');
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        // Only show error if it's a real API/server error, not just no chat yet
         setLoading(false);
         setError('Failed to load chat.');
       });
@@ -119,16 +122,34 @@ export default function GuideChatPanel({ guideId }) {
     setIsInputDisabled(disabled);
   }, [chatStatus]);
 
+  // Prevent double send by debouncing handleSend
+  const sendingRef = useRef(false);
   const handleSend = async () => {
-    if (!input.trim() || !chatId || isInputDisabled) return;
+    if (sendingRef.current) return;
+    if (!input.trim() || isInputDisabled || !chatId) return;
+    sendingRef.current = true;
     setLoading(true);
     try {
-      const resp = await api.post(`/chat/${chatId}/message`, {
-        content: input,
-        messageType: 'TEXT'
-      });
-      setMessages(prev => [...prev, resp.data.message]);
-      if (socketRef.current) {
+      let resp;
+      // If this is a direct chat (bookingId is null), use the direct message endpoint
+      if (selectedTourist && chatId && tourists.find(t => t._id === selectedTourist._id)) {
+        resp = await api.post(`/chat/direct/${selectedTourist._id}/${guideId}/message`, {
+          content: input,
+          messageType: 'TEXT'
+        });
+        // If chatId was just created, update it
+        if (resp.data.chatId && resp.data.chatId !== chatId) {
+          setChatId(resp.data.chatId);
+        }
+      } else {
+        // fallback for booking-based chat (should not happen in this panel)
+        resp = await api.post(`/chat/${chatId}/message`, {
+          content: input,
+          messageType: 'TEXT'
+        });
+      }
+      // Do not update messages here; rely on socket event only
+      if (socketRef.current && chatId) {
         socketRef.current.emit('chatMessage', {
           chatId,
           senderId: guideId,
@@ -142,6 +163,7 @@ export default function GuideChatPanel({ guideId }) {
       alert(err.response?.data?.error || 'Message failed');
     }
     setLoading(false);
+    setTimeout(() => { sendingRef.current = false; }, 250); // allow next send after short delay
   };
 
   return (
@@ -211,7 +233,7 @@ export default function GuideChatPanel({ guideId }) {
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CircularProgress />
             </Box>
-          ) : error ? (
+          ) : error && !chatId ? (
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
               <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>
               <Button onClick={() => setSelectedTourist(null)} color="primary" variant="outlined">Back</Button>
@@ -280,16 +302,24 @@ export default function GuideChatPanel({ guideId }) {
             variant="outlined"
             size="medium"
             sx={{ bgcolor: '#fff', borderRadius: 3, mr: 2, fontSize: 16 }}
-            onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
-            disabled={isInputDisabled || loading || !!error}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={isInputDisabled || loading || !!error || !chatId}
             inputProps={{ style: { fontSize: 16, padding: '12px' } }}
           />
           <Button
             variant="contained"
             color="success"
             sx={{ minWidth: 48, minHeight: 48, borderRadius: 2, fontWeight: 700, fontSize: 16, boxShadow: 'none', textTransform: 'none' }}
-            onClick={handleSend}
-            disabled={!input.trim() || isInputDisabled || loading || !!error}
+            onClick={e => {
+              e.preventDefault();
+              handleSend();
+            }}
+            disabled={!input.trim() || isInputDisabled || loading || !!error || !chatId}
           >
             Send
           </Button>
