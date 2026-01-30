@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "./api";
 
+
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -10,6 +11,7 @@ import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Avatar from "@mui/material/Avatar";
+import MenuItem from "@mui/material/MenuItem";
 
 import PersonIcon from "@mui/icons-material/Person";
 import RoomIcon from "@mui/icons-material/Room";
@@ -17,7 +19,12 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import HotelIcon from "@mui/icons-material/Hotel";
 import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 
+
 import styles from "./Register.module.css";
+
+const languageOptions = [
+  "English", "Hindi", "Spanish", "French", "German", "Chinese", "Other"
+];
 
 const roles = [
   { label: "Tourist", icon: <PersonIcon color="success" /> },
@@ -36,7 +43,10 @@ export default function Register() {
     password: "",
     phone: "",
     country: "",
-    interests: ""
+    interests: "",
+    bio: "",
+    experienceYears: "",
+    languages: [],
   });
 
   const handleRole = (event, newRole) => {
@@ -47,38 +57,40 @@ export default function Register() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleLanguagesChange = (e) => {
+    setForm({ ...form, languages: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      const payload = {
+      let payload = {
         name: form.name,
         email: form.email,
         password: form.password,
         phone: form.phone,
         country: form.country,
         interests: form.interests,
-        role: selectedRole.toLowerCase()
+        role: selectedRole.toLowerCase(),
       };
-
-      console.log("Sending to backend 👉", payload);
-
+      if (selectedRole === "Guide") {
+        payload = {
+          ...payload,
+          bio: form.bio,
+          experienceYears: form.experienceYears,
+          languages: form.languages,
+        };
+      }
       await api.post("/register", payload);
-
       alert("Account created successfully!");
       window.location.href = "/login";
-
     } catch (err) {
-      console.log("REGISTER ERROR 👉", err.response || err);
-
       let msg = "Registration failed";
-
       if (err.response) {
         msg = err.response.data?.message || err.response.data || "Server error";
       } else {
         msg = err.message;
       }
-
       alert(msg);
     }
   };
@@ -113,29 +125,29 @@ export default function Register() {
           Register As
         </Typography>
 
-        <ToggleButtonGroup
-          value={selectedRole}
-          exclusive
-          onChange={handleRole}
-          fullWidth
-          className={styles.roleGroup}
-          sx={{ mb: 3 }}
-        >
-          {roles.map((role) => (
-            <ToggleButton
-              key={role.label}
-              value={role.label}
-              className={styles.roleBtn}
-            >
-              <Box display="flex" flexDirection="column" alignItems="center">
-                {role.icon}
-                <Typography variant="caption" fontWeight={600}>
-                  {role.label}
-                </Typography>
-              </Box>
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        <Box className={styles.roleGrid} mb={3}>
+          <ToggleButtonGroup
+            value={selectedRole}
+            exclusive
+            onChange={handleRole}
+            className={styles.roleGroup}
+          >
+            {roles.map((role) => (
+              <ToggleButton
+                key={role.label}
+                value={role.label}
+                className={styles.roleBtnSquare}
+              >
+                <Box display="flex" flexDirection="column" alignItems="center">
+                  {role.icon}
+                  <Typography variant="caption" fontWeight={600}>
+                    {role.label}
+                  </Typography>
+                </Box>
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Box>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <TextField fullWidth margin="normal" required label="Full Name" name="name" value={form.name} onChange={handleChange} />
@@ -144,6 +156,29 @@ export default function Register() {
           <TextField fullWidth margin="normal" required label="Phone" name="phone" value={form.phone} onChange={handleChange} />
           <TextField fullWidth margin="normal" required label="Country" name="country" value={form.country} onChange={handleChange} />
           <TextField fullWidth margin="normal" label="Interests" name="interests" value={form.interests} onChange={handleChange} />
+
+          {/* Guide-specific fields */}
+          {selectedRole === 'Guide' && (
+            <>
+              <TextField fullWidth margin="normal" required label="Bio" name="bio" value={form.bio} onChange={handleChange} multiline rows={2} />
+              <TextField fullWidth margin="normal" required label="Experience (years)" name="experienceYears" value={form.experienceYears} onChange={handleChange} type="number" />
+              <TextField
+                select
+                fullWidth
+                margin="normal"
+                required
+                label="Languages"
+                name="languages"
+                value={form.languages}
+                onChange={handleLanguagesChange}
+                SelectProps={{ multiple: true }}
+              >
+                {languageOptions.map(lang => (
+                  <MenuItem key={lang} value={lang}>{lang}</MenuItem>
+                ))}
+              </TextField>
+            </>
+          )}
 
           <Button
             type="submit"

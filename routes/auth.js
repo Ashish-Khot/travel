@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Guide = require("../models/Guide");
 
 const router = express.Router();
 
@@ -29,6 +30,7 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
+
     // Create user
     const user = await User.create({
       name,
@@ -39,6 +41,18 @@ router.post("/register", async (req, res) => {
       interests,
       role
     });
+
+    // If registering as a guide, also create Guide profile
+    if (role === 'guide') {
+      await Guide.create({
+        userId: user._id,
+        bio: req.body.bio || '',
+        experienceYears: req.body.experienceYears || 0,
+        languages: req.body.languages || [],
+        phone: user.phone,
+        approved: false
+      });
+    }
 
     res.status(201).json({
       message: "User registered successfully",

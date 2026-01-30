@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Admin Dashboard Theme Variables */
+:root[data-theme='light'] {
+	--bg: #f8fafc;
+	--sidebar-bg: #fff;
+	--sidebar-text: #222;
+	--sidebar-active: #e0f2fe;
+	--sidebar-active-text: #0284c7;
+	--topbar-bg: #fff;
+	--mui-primary: #0284c7;
+	--mui-secondary: #fbbf24;
+}
+
+:root[data-theme='dark'] {
+	--bg: #18181b;
+	--sidebar-bg: #23232b;
+	--sidebar-text: #e5e7eb;
+	--sidebar-active: #334155;
+	--sidebar-active-text: #38bdf8;
+	--topbar-bg: #23232b;
+	--mui-primary: #38bdf8;
+	--mui-secondary: #fbbf24;
+}
+
+body {
+	background: var(--bg);
+}

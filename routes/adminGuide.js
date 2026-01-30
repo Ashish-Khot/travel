@@ -39,12 +39,23 @@ router.post('/action/:id', verifyToken, authorizeRoles('admin'), async (req, res
     if (action === 'approve') {
       guide.approved = true;
       await guide.save();
-      await sendEmail(guide.userId.email, 'Guide Application Approved', 'Congratulations! Your guide application has been approved.');
+      try {
+        await sendEmail(guide.userId.email, 'Guide Application Approved', 'Congratulations! Your guide application has been approved.');
+      } catch (emailErr) {
+        console.error('Failed to send approval email:', emailErr.message);
+        // Optionally, you can log this or notify admin, but don't fail the request
+      }
       res.json({ message: 'Guide approved', guide });
     } else if (action === 'reject') {
-      await sendEmail(guide.userId.email, 'Guide Application Rejected', 'Sorry, your guide application has been rejected.');
-      await Guide.findByIdAndDelete(guideId);
-      res.json({ message: 'Guide rejected and removed' });
+      try {
+        await sendEmail(guide.userId.email, 'Guide Application Rejected', 'Sorry, your guide application has been rejected.');
+      } catch (emailErr) {
+        console.error('Failed to send rejection email:', emailErr.message);
+      }
+      guide.rejected = true;
+      guide.approved = false;
+      await guide.save();
+      res.json({ message: 'Guide rejected', guide });
     } else {
       res.status(400).json({ message: 'Invalid action' });
     }

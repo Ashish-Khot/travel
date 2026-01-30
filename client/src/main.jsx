@@ -1,11 +1,9 @@
-
-
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
+import AdminRoutes from '../admin/routes.jsx';
  
-
 import App from './App.jsx';
 import Register from './Register.jsx';
 import Login from './Login.jsx';
@@ -17,6 +15,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="/admin/*" element={<AdminRoutes />} />
+        {/* Redirect legacy /admin-dashboard to /admin */}
+        <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
         <Route path="/" element={<App />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />

@@ -30,6 +30,10 @@ const GuideSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  rejected: {
+    type: Boolean,
+    default: false
+  },
   bookings: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'
