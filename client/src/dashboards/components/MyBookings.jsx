@@ -1,4 +1,9 @@
+
 import React, { useEffect, useState, useRef } from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import api from '../../api';
 import { io } from 'socket.io-client';
 import Box from '@mui/material/Box';
@@ -21,6 +26,8 @@ export default function MyBookings() {
   const [deleteBookingId, setDeleteBookingId] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [reviewDialog, setReviewDialog] = useState({ open: false, booking: null });
+  const [reviewActionLoading, setReviewActionLoading] = useState(false);
 
   // Open edit booking modal
   const handleOpenEdit = (booking) => {
@@ -129,8 +136,50 @@ export default function MyBookings() {
               <Box>
                 <Typography fontWeight={700} fontSize={20} mb={1}>{booking.destination || 'Tour'}</Typography>
                 <Chip label={booking.status} color={booking.status === 'pending' ? 'warning' : booking.status === 'confirmed' ? 'success' : booking.status === 'completed' ? 'info' : 'default'} size="small" sx={{ mb: 1 }} />
-                <Typography fontSize={15} color="text.secondary">{new Date(booking.date).toLocaleDateString()} </Typography>
+                <Typography fontSize={15} color="text.secondary">
+                  {booking.startDateTime && booking.endDateTime ? (
+                    (() => {
+                      const start = new Date(booking.startDateTime);
+                      const end = new Date(booking.endDateTime);
+                      const sameDay = start.toDateString() === end.toDateString();
+                      if (sameDay) {
+                        return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                      } else {
+                        return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleDateString()} ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                      }
+                    })()
+                  ) : ''}
+                </Typography>
                 <Typography fontSize={15} color="text.secondary">Guide: {booking.guideId?.name || booking.guideId}</Typography>
+                {/* Show review request message and accept/decline if present and not yet handled */}
+                {booking.status === 'completed' && booking.reviewRequestSent && !booking.reviewRequestStatus && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: '#f6f8fa', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                    <Typography fontWeight={600} mb={1}>Message from your guide:</Typography>
+                    <Typography mb={2} style={{ whiteSpace: 'pre-line' }}>{booking.reviewRequestMessage}</Typography>
+                    <Button onClick={() => setReviewDialog({ open: true, booking })} className="bg-blue-600 hover:bg-blue-700" sx={{ mr: 2 }}>Accept & Leave Review</Button>
+                    <Button onClick={async () => {
+                      setReviewActionLoading(true);
+                      try {
+                        await api.put(`/booking/review-request/${booking._id}/decline`);
+                        setSnackbar({ open: true, message: 'You declined to leave a review.', severity: 'info' });
+                        // Refresh bookings
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        const res = await api.get(`/booking/tourist/${user._id}`);
+                        setBookings(res.data.bookings || []);
+                      } catch (err) {
+                        setSnackbar({ open: true, message: 'Failed to decline review.', severity: 'error' });
+                      } finally {
+                        setReviewActionLoading(false);
+                      }
+                    }} className="bg-gray-400 hover:bg-gray-500" disabled={reviewActionLoading}>Decline</Button>
+                  </Box>
+                )}
+                {/* Show declined message if tourist declined */}
+                {booking.status === 'completed' && booking.reviewRequestStatus === 'declined' && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: '#f8f8f8', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                    <Typography color="text.secondary">You chose not to leave a review for this tour.</Typography>
+                  </Box>
+                )}
               </Box>
               <Box sx={{ textAlign: 'right' }}>
                 <Typography fontWeight={700} color="green" fontSize={22}>${booking.price || 0}</Typography>
@@ -147,6 +196,39 @@ export default function MyBookings() {
               </Box>
             </Box>
           ))}
+                {/* Accept Review Dialog (just a confirmation, actual review is in ReviewsPanel) */}
+                <Dialog open={reviewDialog.open} onClose={() => setReviewDialog({ open: false, booking: null })}>
+                  <DialogTitle>Accept & Leave Review</DialogTitle>
+                  <DialogContent>
+                    <Typography>Thank you for agreeing to leave a review! You can now review your guide in the Reviews section.</Typography>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={() => setReviewDialog({ open: false, booking: null })}>Close</Button>
+                    <Button
+                      onClick={async () => {
+                        setReviewActionLoading(true);
+                        try {
+                          await api.put(`/booking/review-request/${reviewDialog.booking._id}/accept`);
+                          setSnackbar({ open: true, message: 'You can now leave a review for this tour.', severity: 'success' });
+                          setReviewDialog({ open: false, booking: null });
+                          // Refresh bookings
+                          const user = JSON.parse(localStorage.getItem('user') || '{}');
+                          const res = await api.get(`/booking/tourist/${user._id}`);
+                          setBookings(res.data.bookings || []);
+                        } catch (err) {
+                          setSnackbar({ open: true, message: 'Failed to accept review.', severity: 'error' });
+                        } finally {
+                          setReviewActionLoading(false);
+                        }
+                      }}
+                      disabled={reviewActionLoading}
+                      variant="contained"
+                      color="primary"
+                    >
+                      Accept & Continue
+                    </Button>
+                  </DialogActions>
+                </Dialog>
           {/* Chat Modal */}
           <Modal open={openChat} onClose={() => setOpenChat(false)}>
             <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: '#f8fdf7', borderRadius: 2, boxShadow: 4, p: 0, minWidth: 700, minHeight: 500 }}>

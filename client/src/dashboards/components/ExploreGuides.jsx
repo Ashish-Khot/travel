@@ -9,9 +9,9 @@ import Alert from '@mui/material/Alert';
 
 import GuideCard from './GuideCard';
 import BookGuideDialog from './BookGuideDialog';
-// import api from '././api'; //  MUST BE AT TOP
 
 import api from "../../api"
+import dayjs from 'dayjs';
 
 
 export default function ExploreGuides() {
@@ -90,16 +90,17 @@ export default function ExploreGuides() {
   };
 
 
-  const handleConfirm = async ({ destination, startDate, endDate, totalPrice }) => {
-    if (!selectedGuide || !startDate || !endDate) return;
+  const handleConfirm = async ({ destination, startDate, endDate, startTime, endTime, totalPrice }) => {
+    if (!selectedGuide || !startDate || !endDate || !startTime || !endTime) return;
     try {
-      // Use the referenced User _id as guideId for booking
       const guideId = selectedGuide.userId;
-      // Convert startDate to ISO string
-      const date = startDate && startDate.toDate ? startDate.toDate().toISOString() : startDate;
+      // Compose startDateTime and endDateTime as ISO strings
+      const startDateTime = dayjs(startDate).hour(dayjs(startTime).hour()).minute(dayjs(startTime).minute()).second(0).toISOString();
+      const endDateTime = dayjs(endDate).hour(dayjs(endTime).hour()).minute(dayjs(endTime).minute()).second(0).toISOString();
       const response = await api.post('/booking/book', {
         guideId,
-        date,
+        startDateTime,
+        endDateTime,
         destination,
         price: totalPrice
       });
@@ -112,7 +113,6 @@ export default function ExploreGuides() {
         setSnackbarSeverity('error');
       }
     } catch (err) {
-      // Show backend error message if available
       const backendMsg = err?.response?.data?.message || err.message || 'Booking failed. Please try again.';
       setSuccessMsg(`Booking failed: ${backendMsg}`);
       setSnackbarSeverity('error');

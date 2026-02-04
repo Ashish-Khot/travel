@@ -27,7 +27,11 @@ const BookingSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  date: {
+  startDateTime: {
+    type: Date,
+    required: true
+  },
+  endDateTime: {
     type: Date,
     required: true
   },
@@ -45,6 +49,10 @@ const BookingSchema = new mongoose.Schema({
     default: 'pending',
     required: true
   },
+  // Review request system fields
+  reviewRequestSent: { type: Boolean, default: false },
+  reviewRequestMessage: { type: String, default: '' },
+  reviewRequestStatus: { type: String, enum: ['accepted', 'declined', ''], default: '' },
   messages: [MessageSchema]
 }, {
   timestamps: true

@@ -16,26 +16,53 @@ export default function ReviewsPanel() {
   const [search, setSearch] = useState('');
   const [reviews, setReviews] = useState([]);
 
-  // Fetch guides from backend
+  // Fetch only booked guides for this tourist
   useEffect(() => {
-    async function fetchGuides() {
+    async function fetchBookedGuides() {
       try {
-        const res = await api.get('/guide');
-        const realGuides = (res.data.guides || []).map(g => ({
-          _id: g._id,
-          userId: g.userId?._id,
-          name: g.userId?.name,
-          avatar: g.userId?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
-          rating: g.ratings || 0,
-          reviews: 0 // will update after fetching reviews
-        }));
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user._id) {
+          setGuides([]);
+          return;
+        }
+        // Get bookings for this tourist
+        const bookingsRes = await api.get(`/booking/tourist/${user._id}`);
+        const bookings = bookingsRes.data.bookings || [];
+        // Only consider bookings that are confirmed/approved and review request accepted (or legacy logic)
+        const eligibleBookings = bookings.filter(b => (
+          (b.status === 'confirmed' || b.status === 'approved') &&
+          (
+            // If review request system is used, only allow if accepted
+            (b.reviewRequestSent ? b.reviewRequestStatus === 'accepted' : true)
+          )
+        ));
+        // Extract unique guide userIds from eligible bookings
+        const guideUserIds = [...new Set(eligibleBookings.map(b => b.guideId?._id || b.guideId))];
+        if (guideUserIds.length === 0) {
+          setGuides([]);
+          return;
+        }
+        // Get all guides (to get their info)
+        const guidesRes = await api.get('/guide');
+        const allGuides = guidesRes.data.guides || [];
+        // Filter only guides that are in the user's eligible bookings
+        const realGuides = allGuides
+          .filter(g => guideUserIds.includes(g.userId?._id || g.userId))
+          .map(g => ({
+            _id: g._id,
+            userId: g.userId?._id,
+            name: g.userId?.name,
+            avatar: g.userId?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
+            rating: g.ratings || 0,
+            reviews: 0 // will update after fetching reviews
+          }));
         setGuides(realGuides);
         if (realGuides.length > 0) setSelectedGuide(realGuides[0]);
       } catch (err) {
         setGuides([]);
       }
     }
-    fetchGuides();
+    fetchBookedGuides();
   }, []);
 
   // Fetch reviews for selected guide

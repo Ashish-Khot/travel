@@ -24,7 +24,7 @@ export default function BookingsDataGrid({ bookings = [], onStatusChange, onChat
   const columns = [
     { field: 'tourist', headerName: 'Tourist', flex: 1, minWidth: 120 },
     { field: 'tour', headerName: 'Tour', flex: 1, minWidth: 140 },
-    { field: 'date', headerName: 'Date', flex: 1, minWidth: 110 },
+    { field: 'dateRange', headerName: 'Date/Time', flex: 1, minWidth: 160 },
     { field: 'amount', headerName: 'Amount', flex: 1, minWidth: 100, renderCell: (params) => `$${params.value}` },
     { field: 'status', headerName: 'Status', flex: 1, minWidth: 100, renderCell: (params) => (
       <Chip label={params.value} color={params.value === 'Accepted' ? 'success' : params.value === 'Rejected' ? 'error' : 'warning'} size="small" />
@@ -49,15 +49,32 @@ export default function BookingsDataGrid({ bookings = [], onStatusChange, onChat
   ];
 
   // Map backend bookings to DataGrid rows
-  const rows = bookings.map((b, idx) => ({
-    id: b._id || idx,
-    tourist: b.touristId?.name || 'Unknown',
-    tour: b.destination || 'N/A',
-    date: b.date ? new Date(b.date).toISOString().slice(0, 10) : '',
-    amount: b.price || 0,
-    status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : 'Pending',
-    originalBooking: b,
-  }));
+  const rows = bookings.map((b, idx) => {
+    let dateRange = '';
+    if (b.startDateTime && b.endDateTime) {
+      const start = new Date(b.startDateTime);
+      const end = new Date(b.endDateTime);
+      const sameDay = start.toDateString() === end.toDateString();
+      if (sameDay) {
+        dateRange = `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        dateRange = `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleDateString()} ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    } else if (b.date) {
+      // Fallback for legacy bookings
+      const legacy = new Date(b.date);
+      dateRange = legacy.toLocaleDateString();
+    }
+    return {
+      id: b._id || idx,
+      tourist: b.touristId?.name || 'Unknown',
+      tour: b.destination || 'N/A',
+      dateRange,
+      amount: b.price || 0,
+      status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : 'Pending',
+      originalBooking: b,
+    };
+  });
   return (
     <Box sx={{ height: 420, width: '100%', bgcolor: 'background.paper', borderRadius: 4, boxShadow: 3, p: 2 }}>
       <DataGrid

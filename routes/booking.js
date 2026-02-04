@@ -1,4 +1,5 @@
 
+
 const express = require('express');
 const Booking = require('../models/Booking');
 const Guide = require('../models/Guide');
@@ -111,14 +112,15 @@ const getIO = () => {
 
 router.post('/book', verifyToken, authorizeRoles('tourist'), async (req, res) => {
   try {
-    const { guideId, date, destination, price } = req.body;
+    const { guideId, startDateTime, endDateTime, destination, price } = req.body;
     const touristId = req.user.userId;
-    console.log('[DEBUG] Booking creation:', { guideId, touristId, date, destination, price });
+    console.log('[DEBUG] Booking creation:', { guideId, touristId, startDateTime, endDateTime, destination, price });
     // Create booking
     const booking = new Booking({
       touristId,
       guideId,
-      date,
+      startDateTime,
+      endDateTime,
       destination,
       price,
       status: 'pending',
@@ -150,6 +152,7 @@ router.post('/book', verifyToken, authorizeRoles('tourist'), async (req, res) =>
 router.get('/guide/:userId', async (req, res) => {
   try {
     console.log('[DEBUG] Fetching bookings for guide:', req.params.userId);
+    // Show all bookings for the guide dashboard (pending, confirmed, cancelled, completed)
     const bookings = await Booking.find({ guideId: req.params.userId })
       .populate('touristId', 'name email')
       .populate('guideId', 'name email');

@@ -331,6 +331,11 @@ export default function GuideDashboard() {
       // Fetch bookings for this guide
       const bookingsRes = await api.get(`/booking/guide/${userObj._id}`);
       console.log('[DEBUG] GuideDashboard fetched bookings:', bookingsRes.data.bookings);
+      if (Array.isArray(bookingsRes.data.bookings)) {
+        bookingsRes.data.bookings.forEach((b, i) => {
+          console.log(`[DEBUG] Booking #${i}:`, b);
+        });
+      }
       setBookings(bookingsRes.data.bookings);
       // Fetch tours for this guide
       const toursRes = await api.get(`/tour/guide/${userObj._id}`);

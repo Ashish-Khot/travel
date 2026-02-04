@@ -20,7 +20,7 @@ export default function ReviewForm({ booking, onSubmit, onClose, initialReview, 
     onSubmit({
       bookingId: booking._id,
       guideId: booking.guideId?._id || booking.guideId,
-      tripDate: booking.date,
+      tripDate: booking.startDateTime,
       rating,
       comment,
       photo,
@@ -31,7 +31,7 @@ export default function ReviewForm({ booking, onSubmit, onClose, initialReview, 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ p: 2, minWidth: 320 }}>
       <Typography variant="h6" mb={2}>{isEdit ? 'Edit Review' : 'Write a Review'}</Typography>
-      <Typography fontSize={14} color="text.secondary" mb={1}>Trip Date: {new Date(booking.date).toLocaleDateString()}</Typography>
+      <Typography fontSize={14} color="text.secondary" mb={1}>Trip Date: {booking.startDateTime ? new Date(booking.startDateTime).toLocaleDateString() : ''}</Typography>
       <Rating value={rating} onChange={(_, v) => setRating(v)} size="large" sx={{ mb: 2 }} />
       <TextField
         label="Your Review"
