@@ -28,7 +28,16 @@ const TravelogueSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
     required: true
-  }
+  },
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5
+  },
+  tags: [{
+    type: String,
+    trim: true
+  }]
 }, {
   timestamps: true
 });

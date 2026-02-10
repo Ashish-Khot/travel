@@ -6,6 +6,19 @@ const nodemailer = require('nodemailer');
 
 const router = express.Router();
 
+
+// Admin fetches all travelogues (for review/approval)
+router.get('/', verifyToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const travelogues = await Travelogue.find()
+      .populate('guideId', 'name email')
+      .sort({ createdAt: -1 });
+    res.json({ travelogues });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // Helper: send email notification
 async function sendEmail(to, subject, text) {
   const transporter = nodemailer.createTransport({
@@ -42,10 +55,11 @@ router.post('/action/:id', verifyToken, authorizeRoles('admin'), async (req, res
       return res.status(400).json({ message: 'Invalid action' });
     }
     await travelogue.save();
-    // Notify guide
+    // Notify guide (do not block response on email failure)
     const guide = await User.findById(travelogue.guideId);
     if (guide && guide.email) {
-      await sendEmail(guide.email, emailSubject, emailText);
+      sendEmail(guide.email, emailSubject, emailText)
+        .catch(e => console.error('Email send failed:', e.message));
     }
     res.json({ message: statusUpdate, travelogue });
   } catch (err) {

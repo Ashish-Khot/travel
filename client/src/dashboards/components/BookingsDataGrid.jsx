@@ -80,12 +80,18 @@ export default function BookingsDataGrid({ bookings = [], onStatusChange }) {
             onClick={async () => {
               setSending(true);
               try {
+                // 1. Send review request (existing logic)
                 await api.put(`/booking/review-request/${selectedBookingId}`, { message: reviewMsg });
+                // 2. Send notification to tourist for completed tour
+                await api.post('/notifications/guide/complete-tour', {
+                  bookingId: selectedBookingId,
+                  message: reviewMsg
+                });
                 setOpenReviewDialog(false);
                 setSelectedBookingId(null);
                 if (onStatusChange) onStatusChange();
               } catch (err) {
-                alert('Failed to send review request');
+                alert('Failed to send review request or notification');
               } finally {
                 setSending(false);
               }

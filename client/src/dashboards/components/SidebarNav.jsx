@@ -20,6 +20,7 @@ import TipsIcon from '@mui/icons-material/TipsAndUpdates';
 import EmergencyIcon from '@mui/icons-material/ReportProblem';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
 import { styled } from '@mui/material/styles';
@@ -35,6 +36,7 @@ const iconMap = {
   Chat: <ChatIcon sx={{ color: 'primary.main' }} />,
   Reviews: <ReviewsIcon sx={{ color: 'primary.main' }} />,
   'Travel Tips': <TipsIcon sx={{ color: 'primary.main' }} />,
+  Travelogue: <MenuBookIcon sx={{ color: 'primary.main' }} />,
   Emergency: <EmergencyIcon sx={{ color: 'error.main' }} />,
   Profile: <PersonIcon sx={{ color: 'primary.main' }} />,
   Settings: <SettingsIcon sx={{ color: 'primary.main' }} />,

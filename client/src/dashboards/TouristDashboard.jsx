@@ -8,19 +8,18 @@ import { ThemeProvider } from '@mui/material/styles';
 import theme from '../theme';
 import AppBarTop from './components/AppBarTop';
 import SidebarNav from './components/SidebarNav';
-import WelcomeSection from './components/WelcomeSection';
-import PopularDestinations from './components/PopularDestinations';
-import TopRatedGuides from './components/TopRatedGuides';
-import TrendingTravelogues from './components/TrendingTravelogues';
-import UpcomingTripsCard from './components/UpcomingTripsCard';
+
+
 import ExploreGuides from './components/ExploreGuides';
+import MyBookings from './components/MyBookings';
 import ChatPanel from './components/ChatPanel';
 import ReviewsPanel from './components/ReviewsPanel';
 import TravelTipsPanel from './components/TravelTipsPanel';
 import EmergencySupportPanel from './components/EmergencySupportPanel';
 import TouristProfile from './components/TouristProfile';
 import TouristSettings from './components/TouristSettings';
-import MyBookings from './components/MyBookings';
+import TouristNotifications from './components/TouristNotifications';
+import CreateTravelogue from './components/CreateTravelogue';
 
 
 export default function TouristDashboard() {
@@ -35,11 +34,13 @@ export default function TouristDashboard() {
   // Sidebar navigation items
   const navItems = [
     { label: 'Dashboard', value: 'Dashboard' },
+    { label: 'Notifications', value: 'Notifications' },
     { label: 'Explore Destinations', value: 'Explore Destinations' },
     { label: 'Explore Guides', value: 'Explore Guides' },
     { label: 'My Bookings', value: 'My Bookings' },
     { label: 'Chat', value: 'Chat' },
     { label: 'Reviews', value: 'Reviews' },
+    { label: 'Travelogue', value: 'Travelogue' },
     { label: 'Travel Tips', value: 'Travel Tips' },
     { label: 'Emergency', value: 'Emergency' },
     { label: 'Profile', value: 'Profile' },
@@ -73,18 +74,17 @@ export default function TouristDashboard() {
           }}
         >
           {selectedTab === 'Dashboard' && (
-            <>
-              <WelcomeSection user={user} />
-              <PopularDestinations />
-              <TopRatedGuides />
-              <TrendingTravelogues />
-              <UpcomingTripsCard />
-            </>
+              <Box>
+                <h2>Welcome to your Dashboard</h2>
+                <p>Dashboard content coming soon.</p>
+              </Box>
           )}
+          {selectedTab === 'Notifications' && <TouristNotifications />}
           {selectedTab === 'Explore Guides' && <ExploreGuides />}
           {selectedTab === 'My Bookings' && <MyBookings />}
           {selectedTab === 'Chat' && <ChatPanel />}
           {selectedTab === 'Reviews' && <ReviewsPanel />}
+          {selectedTab === 'Travelogue' && <CreateTravelogue />}
           {selectedTab === 'Travel Tips' && <TravelTipsPanel />}
           {selectedTab === 'Emergency' && <EmergencySupportPanel />}
           {selectedTab === 'Profile' && <TouristProfile user={user} />}

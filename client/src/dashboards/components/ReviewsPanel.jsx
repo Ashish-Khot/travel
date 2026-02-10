@@ -47,10 +47,14 @@ export default function ReviewsPanel() {
         const allGuides = guidesRes.data.guides || [];
         // Filter only guides that are in the user's eligible bookings
         const realGuides = allGuides
-          .filter(g => guideUserIds.includes(g.userId?._id || g.userId))
+          .filter(g => {
+            // Always compare as string
+            const guideUserId = (g.userId?._id || g.userId || '').toString();
+            return guideUserIds.map(id => id.toString()).includes(guideUserId);
+          })
           .map(g => ({
             _id: g._id,
-            userId: g.userId?._id,
+            userId: (g.userId?._id || g.userId || '').toString(),
             name: g.userId?.name,
             avatar: g.userId?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
             rating: g.ratings || 0,

@@ -1,20 +1,27 @@
+
 const express = require('express');
 const Travelogue = require('../models/Travelogue');
-const { verifyToken, authorizeRoles } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
+const upload = require('../middleware/uploadTravelogueMedia');
 
 const router = express.Router();
 
-// Guide submits a travelogue
-router.post('/submit', verifyToken, authorizeRoles('guide'), async (req, res) => {
+// Tourist submits a travelogue (with media, rating, tags)
+router.post('/tourist', verifyToken, upload.array('media', 8), async (req, res) => {
   try {
-    const { title, description, images, location } = req.body;
-    const guideId = req.user.userId;
+    const { title, destination, description, rating } = req.body;
+    let tags = req.body.tags || [];
+    if (typeof tags === 'string') tags = [tags];
+    const images = req.files ? req.files.map(f => f.path.replace('\\', '/')) : [];
+    const userId = req.user.userId;
     const travelogue = new Travelogue({
       title,
       description,
       images,
-      guideId,
-      location,
+      guideId: userId,
+      location: destination,
+      rating: rating ? Number(rating) : undefined,
+      tags,
       status: 'pending'
     });
     await travelogue.save();
