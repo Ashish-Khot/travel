@@ -15,7 +15,7 @@ router.post('/guide/complete-tour', verifyToken, async (req, res) => {
     const booking = await Booking.findById(bookingId).populate('touristId guideId');
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     // Add notification for the tourist
-    const notification = {
+    notifications.push({
       id: `${Date.now()}_${bookingId}`,
       touristId: booking.touristId._id.toString(),
       guideName: booking.guideId.name,
@@ -23,10 +23,7 @@ router.post('/guide/complete-tour', verifyToken, async (req, res) => {
       message: message || 'Tour is completed. Please confirm and leave a review.',
       bookingId: bookingId,
       status: 'pending',
-    };
-    notifications.push(notification);
-    console.log('[DEBUG] Notification created:', notification);
-    console.log('[DEBUG] All notifications:', notifications);
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -36,9 +33,7 @@ router.post('/guide/complete-tour', verifyToken, async (req, res) => {
 // Tourist fetches their notifications
 router.get('/tourist', verifyToken, async (req, res) => {
   try {
-    // Support id, _id, or userId in JWT payload
-    const touristId = req.user.id || req.user._id || req.user.userId;
-    console.log('[DEBUG] /notifications/tourist touristId:', touristId, 'all notification touristIds:', notifications.map(n => n.touristId));
+    const touristId = req.user.id;
     const myNotifications = notifications.filter(n => n.touristId === touristId && n.status === 'pending');
     res.json({ notifications: myNotifications });
   } catch (err) {
@@ -61,3 +56,4 @@ router.post('/tourist/respond', verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+

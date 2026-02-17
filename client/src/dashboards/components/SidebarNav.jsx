@@ -23,6 +23,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { styled } from '@mui/material/styles';
 
 const drawerWidth = 240;
@@ -33,6 +34,7 @@ const iconMap = {
   'Explore Destinations': <ExploreIcon sx={{ color: 'primary.main' }} />,
   'Explore Guides': <PeopleAltIcon sx={{ color: 'primary.main' }} />,
   'My Bookings': <BookingsIcon sx={{ color: 'primary.main' }} />,
+  Notifications: <NotificationsIcon sx={{ color: 'primary.main' }} />,
   Chat: <ChatIcon sx={{ color: 'primary.main' }} />,
   Reviews: <ReviewsIcon sx={{ color: 'primary.main' }} />,
   'Travel Tips': <TipsIcon sx={{ color: 'primary.main' }} />,

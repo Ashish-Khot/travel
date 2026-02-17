@@ -13,7 +13,13 @@ const adminDashboardRouter = require('./routes/adminDashboard');
 const chatRoutes = require('./routes/chat');
 const notificationsRoutes = require('./routes/notifications');
 const travelogueRouter = require('./routes/travelogue');
+const destinationRouter = require('./routes/destination');
+
+const roomRouter = require('./routes/room');
+const hotelRouter = require('./routes/hotel');
+const hotelProfileRouter = require('./routes/hotelProfile');
 const adminTravelogueRouter = require('./routes/adminTravelogue');
+const hotelProfileInfoRouter = require('./routes/hotelProfileInfo');
 
 
 const path = require('path');
@@ -47,6 +53,13 @@ app.use('/api/notifications', notificationsRoutes); // Notifications API routes
 app.use('/api/adminDashboard', adminDashboardRouter); // Admin dashboard stats
 app.use('/api/travelogue', travelogueRouter); // Travelogue endpoints
 app.use('/api/adminTravelogue', adminTravelogueRouter); // Admin travelogue actions
+app.use('/api/destination', destinationRouter); // Destination endpoints
+
+app.use('/api/hotel', hotelRouter); // New hotel profile endpoints (separate collection)
+app.use('/api/hotelProfile', hotelProfileRouter); // (legacy, for migration)
+app.use('/api/hotelProfileInfo', hotelProfileInfoRouter); // (legacy, for migration)
+
+app.use('/api/room', roomRouter); // Hotel room endpoints
 
 app.get("/", (req, res) => {
   res.send("API is running");

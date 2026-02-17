@@ -31,8 +31,9 @@ router.post("/register", async (req, res) => {
     }
 
 
-    // Create user
-    const user = await User.create({
+
+    // Create user, initialize hotel fields if role is hotel
+    const userData = {
       name,
       email,
       password,
@@ -40,7 +41,27 @@ router.post("/register", async (req, res) => {
       country,
       interests,
       role
-    });
+    };
+    if (role === 'hotel') {
+      userData.address = '';
+      userData.amenities = [];
+      userData.hotelImages = [];
+    }
+    const user = await User.create(userData);
+
+    // If registering as a hotel, create Hotel profile
+    if (role === 'hotel') {
+      const Hotel = require('../models/Hotel');
+      await Hotel.create({
+        user: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: '',
+        amenities: [],
+        images: []
+      });
+    }
 
     // If registering as a guide, also create Guide profile
     if (role === 'guide') {

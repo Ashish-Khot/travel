@@ -10,6 +10,7 @@ import Login from './Login.jsx';
 import GuideDashboard from './dashboards/GuideDashboard';
 import TouristDashboard from './dashboards/TouristDashboard.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
+import HotelDashboard from './pages/HotelDashboard.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -25,6 +26,11 @@ createRoot(document.getElementById('root')).render(
         <Route path="/tourist-dashboard" element={
           <ProtectedRoute allowedRole="tourist">
             <TouristDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/hotel-dashboard" element={
+          <ProtectedRoute allowedRole="hotel">
+            <HotelDashboard />
           </ProtectedRoute>
         } />
       </Routes>

@@ -48,6 +48,7 @@ export default function Login() {
       });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
+      localStorage.setItem('userId', res.data.user._id);
       // If guide, check for rejection before redirect
       if (res.data.user.role === 'guide') {
         // Fetch guide profile by userId
@@ -71,6 +72,8 @@ export default function Login() {
         window.location.href = '/admin-dashboard';
       } else if (res.data.user.role === 'tourist') {
         window.location.href = '/tourist-dashboard';
+      } else if (res.data.user.role === 'hotel') {
+        window.location.href = '/hotel-dashboard';
       } else {
         window.location.href = '/';
       }

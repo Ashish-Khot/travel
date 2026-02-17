@@ -1,17 +1,25 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Admin Dashboard Theme Variables */
+/* Custom Theme Variables for Hotel Dashboard */
 :root[data-theme='light'] {
-	--bg: #f8fafc;
-	--sidebar-bg: #fff;
-	--sidebar-text: #222;
-	--sidebar-active: #e0f2fe;
-	--sidebar-active-text: #0284c7;
+	--bg: #f6f7fb;
+	--sidebar-bg: #1e293b;
+	--sidebar-text: #e0e7ef;
+	--sidebar-active: #f1f5f9;
+	--sidebar-active-text: #6366f1;
 	--topbar-bg: #fff;
-	--mui-primary: #0284c7;
-	--mui-secondary: #fbbf24;
+	--mui-primary: #6366f1;
+	--mui-secondary: #f472b6;
+	--mui-accent: #06b6d4;
+	--mui-success: #22c55e;
+	--mui-warning: #fbbf24;
+	--mui-info: #0ea5e9;
+	--mui-danger: #ef4444;
 }
 
 :root[data-theme='dark'] {
@@ -21,10 +29,17 @@
 	--sidebar-active: #334155;
 	--sidebar-active-text: #38bdf8;
 	--topbar-bg: #23232b;
-	--mui-primary: #38bdf8;
-	--mui-secondary: #fbbf24;
+	--mui-primary: #6366f1;
+	--mui-secondary: #f472b6;
+	--mui-accent: #06b6d4;
+	--mui-success: #22c55e;
+	--mui-warning: #fbbf24;
+	--mui-info: #0ea5e9;
+	--mui-danger: #ef4444;
 }
 
 body {
 	background: var(--bg);
+	font-family: 'Inter', 'Poppins', Arial, sans-serif;
+	color: #222;
 }

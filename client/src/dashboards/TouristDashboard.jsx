@@ -11,6 +11,7 @@ import SidebarNav from './components/SidebarNav';
 
 
 import ExploreGuides from './components/ExploreGuides';
+import ExploreDestinations from './components/ExploreDestinations';
 import MyBookings from './components/MyBookings';
 import ChatPanel from './components/ChatPanel';
 import ReviewsPanel from './components/ReviewsPanel';
@@ -80,6 +81,7 @@ export default function TouristDashboard() {
               </Box>
           )}
           {selectedTab === 'Notifications' && <TouristNotifications />}
+          {selectedTab === 'Explore Destinations' && <ExploreDestinations />}
           {selectedTab === 'Explore Guides' && <ExploreGuides />}
           {selectedTab === 'My Bookings' && <MyBookings />}
           {selectedTab === 'Chat' && <ChatPanel />}
