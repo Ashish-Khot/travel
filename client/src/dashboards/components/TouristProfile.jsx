@@ -1,27 +1,40 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Avatar from '@mui/material/Avatar';
-import Paper from '@mui/material/Paper';
-import Button from '@mui/material/Button';
+import React, { useState, useEffect } from 'react';
+import TouristProfileEdit from './TouristProfileEdit';
+import api from '../../api';
 
-export default function TouristProfile({ user }) {
+export default function TouristProfile({ user: initialUser }) {
+  const [user, setUser] = useState(initialUser);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Fetch tourist profile from backend on mount
+  useEffect(() => {
+    const fetchTouristProfile = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await api.get(`/tourist/${initialUser._id}`);
+        setUser({ ...initialUser, ...res.data });
+      } catch (err) {
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (initialUser?._id) fetchTouristProfile();
+  }, [initialUser?._id]);
+
+  const handleSave = (updated) => {
+    setUser((prev) => ({ ...prev, ...updated }));
+    setError('');
+  };
+
+  if (loading) return <div>Loading profile...</div>;
+
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 4, minWidth: 340, maxWidth: 400 }}>
-        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-          <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 90, height: 90, mb: 2 }} />
-          <Typography variant="h5" fontWeight={700}>{user?.name}</Typography>
-          <Typography variant="body1" color="text.secondary">{user?.email}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Role: {user?.role}
-          </Typography>
-          {/* Add more profile info here if available */}
-          <Button variant="outlined" color="primary" sx={{ mt: 2 }}>
-            Edit Profile
-          </Button>
-        </Box>
-      </Paper>
-    </Box>
+    <>
+      <TouristProfileEdit user={user} onSave={handleSave} />
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+    </>
   );
 }

@@ -45,12 +45,14 @@ function DestinationMap({ destinations, center, zoom }) {
 
 export default function ExploreDestinations() {
   const [search, setSearch] = useState('');
+  const [pendingSearch, setPendingSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [rating, setRating] = useState(0);
   const [distance, setDistance] = useState(0); // 0 means no filter
   const [userLocation, setUserLocation] = useState(null);
   const [selected, setSelected] = useState(null);
   const [destinations, setDestinations] = useState([]);
+  const [crawledDestinations, setCrawledDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -69,6 +71,34 @@ export default function ExploreDestinations() {
       });
   }, []);
 
+  // Search-triggered web crawling
+  const handleSearch = () => {
+    setLoading(true);
+    setError('');
+    // Search DB
+    fetch('http://localhost:3001/api/destination/destinations')
+      .then(res => res.json())
+      .then(data => {
+        setDestinations(data);
+        // Search crawl
+        fetch(`http://localhost:3001/api/destination/destinations/crawl?search=${encodeURIComponent(pendingSearch)}`)
+          .then(res => res.json())
+          .then(crawlData => {
+            setCrawledDestinations(Array.isArray(crawlData) ? crawlData : []);
+            setSearch(pendingSearch);
+            setLoading(false);
+          })
+          .catch(err => {
+            setError('Failed to load web destinations.');
+            setLoading(false);
+          });
+      })
+      .catch(err => {
+        setError('Failed to load destinations.');
+        setLoading(false);
+      });
+  };
+
   // Get user location for distance filter
   React.useEffect(() => {
     if (navigator.geolocation) {
@@ -79,8 +109,8 @@ export default function ExploreDestinations() {
     }
   }, []);
 
-  // Filter logic
-  const filtered = destinations.filter(dest => {
+  // Filter logic for DB destinations
+  const filteredDB = destinations.filter(dest => {
     const matchesCategory = category === 'All' || (dest.category || dest.details?.kinds || '').toLowerCase().includes(category.toLowerCase());
     const matchesRating = (dest.rating || 0) >= rating;
     const matchesSearch =
@@ -94,6 +124,21 @@ export default function ExploreDestinations() {
     }
     return matchesCategory && matchesRating && matchesSearch && matchesDistance;
   });
+
+  // Filter logic for crawled destinations
+  const filteredCrawled = crawledDestinations.filter(dest => {
+    const matchesCategory = category === 'All' || (dest.category || '').toLowerCase().includes(category.toLowerCase());
+    const matchesRating = (dest.rating || 0) >= rating;
+    let matchesDistance = true;
+    if (distance > 0 && userLocation && dest.lat && dest.lon) {
+      const d = getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, dest.lat, dest.lon);
+      matchesDistance = d <= distance;
+    }
+    return matchesCategory && matchesRating && matchesDistance;
+  });
+
+  // Merge both
+  const filtered = [...filteredDB, ...filteredCrawled];
 
   if (loading) {
     return (
@@ -115,12 +160,15 @@ export default function ExploreDestinations() {
       <Box display="flex" gap={2} mb={3} flexWrap="wrap">
         <TextField
           label="Search"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={pendingSearch}
+          onChange={e => setPendingSearch(e.target.value)}
           InputProps={{
             startAdornment: <InputAdornment position="start">🔍</InputAdornment>
           }}
         />
+        <Button variant="contained" color="primary" onClick={handleSearch} sx={{ minWidth: 120 }}>
+          Search
+        </Button>
         <TextField
           select
           label="Category"
@@ -155,7 +203,7 @@ export default function ExploreDestinations() {
             <Typography>No destinations found.</Typography>
           </Box>
         ) : filtered.map(dest => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={dest._id || dest.xid}>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={dest._id || dest.xid || dest.name}>
             <Card onClick={() => setSelected(dest)} sx={{ cursor: 'pointer', height: '100%' }}>
               <CardMedia
                 component="img"

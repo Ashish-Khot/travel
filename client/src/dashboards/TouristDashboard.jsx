@@ -21,13 +21,18 @@ import TouristProfile from './components/TouristProfile';
 import TouristSettings from './components/TouristSettings';
 import TouristNotifications from './components/TouristNotifications';
 import CreateTravelogue from './components/CreateTravelogue';
+import WelcomeSection from './components/WelcomeSection';
+import DashboardMetrics from './components/DashboardMetrics';
+import AIRecommendations from './components/AIRecommendations';
+import WeatherForecastCard from './components/WeatherForecastCard';
+import WeatherSearch from './components/WeatherSearch';
 
-
-export default function TouristDashboard() {
+function TouristDashboard() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useMediaQuery('(max-width:900px)');
   const [selectedTab, setSelectedTab] = useState('Dashboard');
+  const [weatherModal, setWeatherModal] = useState(false);
 
   // Responsive sidebar toggle
   const handleSidebarToggle = () => setSidebarOpen((open) => !open);
@@ -75,10 +80,22 @@ export default function TouristDashboard() {
           }}
         >
           {selectedTab === 'Dashboard' && (
-              <Box>
-                <h2>Welcome to your Dashboard</h2>
-                <p>Dashboard content coming soon.</p>
+            <Box>
+              {/* Welcome Section */}
+              <WelcomeSection user={user} />
+              {/* Metrics Row */}
+              <DashboardMetrics />
+              {/* Recommendations + Weather Row */}
+              <Box display={{ xs: 'block', md: 'flex' }} gap={3}>
+                <Box flex={2} minWidth={0}>
+                  <AIRecommendations />
+                </Box>
+                <Box flex={1} minWidth={260} maxWidth={420}>
+                  <WeatherForecastCard onClick={() => setWeatherModal(true)} clickable />
+                </Box>
+                <WeatherSearch open={weatherModal} onClose={() => setWeatherModal(false)} />
               </Box>
+            </Box>
           )}
           {selectedTab === 'Notifications' && <TouristNotifications />}
           {selectedTab === 'Explore Destinations' && <ExploreDestinations />}
@@ -94,6 +111,9 @@ export default function TouristDashboard() {
           {/* Add other tab content as needed */}
         </Box>
       </Box>
+
     </ThemeProvider>
   );
 }
+
+export default TouristDashboard;

@@ -19,6 +19,10 @@ const roomRouter = require('./routes/room');
 const hotelRouter = require('./routes/hotel');
 const hotelProfileRouter = require('./routes/hotelProfile');
 const adminTravelogueRouter = require('./routes/adminTravelogue');
+
+const touristProfileRouter = require('./routes/touristProfile');
+const touristRouter = require('./routes/tourist');
+const touristAvatarRouter = require('./routes/touristAvatar');
 const hotelProfileInfoRouter = require('./routes/hotelProfileInfo');
 
 
@@ -34,10 +38,12 @@ app.use(cors({
 }));
 
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 // Serve uploaded travelogue media statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
+app.use('/api/touristAvatar', touristAvatarRouter); // Tourist avatar upload endpoint
 
 
 app.use("/api", authRouter);
@@ -57,6 +63,9 @@ app.use('/api/destination', destinationRouter); // Destination endpoints
 
 app.use('/api/hotel', hotelRouter); // New hotel profile endpoints (separate collection)
 app.use('/api/hotelProfile', hotelProfileRouter); // (legacy, for migration)
+
+app.use('/api/touristProfile', touristProfileRouter); // (legacy, for migration)
+app.use('/api/tourist', touristRouter); // New tourist profile endpoints
 app.use('/api/hotelProfileInfo', hotelProfileInfoRouter); // (legacy, for migration)
 
 app.use('/api/room', roomRouter); // Hotel room endpoints
