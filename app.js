@@ -23,6 +23,9 @@ const adminTravelogueRouter = require('./routes/adminTravelogue');
 const touristProfileRouter = require('./routes/touristProfile');
 const touristRouter = require('./routes/tourist');
 const touristAvatarRouter = require('./routes/touristAvatar');
+
+const guideAvatarRouter = require('./routes/guideAvatar');
+const opentripmapRouter = require('./routes/opentripmap');
 const hotelProfileInfoRouter = require('./routes/hotelProfileInfo');
 
 
@@ -42,8 +45,10 @@ app.use(express.json({ limit: '2mb' }));
 
 // Serve uploaded travelogue media statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
 app.use('/api/touristAvatar', touristAvatarRouter); // Tourist avatar upload endpoint
+app.use('/api/guideAvatar', guideAvatarRouter); // Guide avatar upload endpoint
 
 
 app.use("/api", authRouter);
@@ -66,6 +71,8 @@ app.use('/api/hotelProfile', hotelProfileRouter); // (legacy, for migration)
 
 app.use('/api/touristProfile', touristProfileRouter); // (legacy, for migration)
 app.use('/api/tourist', touristRouter); // New tourist profile endpoints
+
+app.use('/api/opentripmap', opentripmapRouter); // OpenTripMap API integration
 app.use('/api/hotelProfileInfo', hotelProfileInfoRouter); // (legacy, for migration)
 
 app.use('/api/room', roomRouter); // Hotel room endpoints

@@ -20,7 +20,7 @@ router.get('/', verifyToken, authorizeRoles('guide'), async (req, res) => {
 // Update guide profile
 router.put('/', verifyToken, authorizeRoles('guide'), async (req, res) => {
   try {
-    const { bio, languages, experienceYears, earnings, ratings, phone } = req.body;
+    const { bio, languages, experienceYears, earnings, ratings, phone, price } = req.body;
     const guide = await Guide.findOne({ userId: req.user.userId });
     if (!guide) return res.status(404).json({ message: 'Guide profile not found' });
     if (bio !== undefined) guide.bio = bio;
@@ -29,6 +29,7 @@ router.put('/', verifyToken, authorizeRoles('guide'), async (req, res) => {
     if (earnings !== undefined) guide.earnings = earnings;
     if (ratings !== undefined) guide.ratings = ratings;
     if (phone !== undefined) guide.phone = phone;
+    if (price !== undefined) guide.price = price;
     await guide.save();
     res.json({ message: 'Profile updated', guide });
   } catch (err) {

@@ -17,7 +17,7 @@ export default function GuideCard({ guide, onBook }) {
       <CardMedia
         component="img"
         height="140"
-        image={guide.avatar}
+        image={guide.avatar ? (guide.avatar.startsWith('http') ? guide.avatar : `http://localhost:3001${guide.avatar}`) : '/avatar.png'}
         alt={guide.name}
         sx={{ borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
       />

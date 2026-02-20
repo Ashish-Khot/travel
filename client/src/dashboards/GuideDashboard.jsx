@@ -385,6 +385,7 @@ export default function GuideDashboard() {
 
   // ProfilePage now uses guideProfile
   const ProfilePage = () => {
+
     const [edit, setEdit] = useState(false);
     const [form, setForm] = useState({
       name: user?.name || '',
@@ -392,40 +393,118 @@ export default function GuideDashboard() {
       phone: guideProfile?.phone || user?.phone || '',
       language: guideProfile?.languages?.[0] || '',
       bio: guideProfile?.bio || '',
+      avatar: user?.avatar || '',
     });
+    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
+    const [uploading, setUploading] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+    const fileInputRef = React.useRef();
+
     useEffect(() => {
+      // Prefer avatar from user, fallback to guideProfile.userId.avatar if available
+      const avatar = user?.avatar || guideProfile?.userId?.avatar || '';
       setForm({
         name: user?.name || '',
         email: user?.email || '',
         phone: guideProfile?.phone || user?.phone || '',
         language: guideProfile?.languages?.[0] || '',
         bio: guideProfile?.bio || '',
+        price: guideProfile?.price ?? 0,
+        avatar,
       });
+      setAvatarPreview(avatar);
     }, [user, guideProfile]);
 
-    const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = e => {
+      const { name, value } = e.target;
+      setForm({ ...form, [name]: name === 'price' ? Number(value) : value });
+    };
+
+    const handleAvatarChange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setUploading(true);
+      setErrorMsg('');
+      const formData = new FormData();
+      formData.append('avatar', file);
+      try {
+        const res = await api.post('/guideAvatar/avatar', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        setForm(f => ({ ...f, avatar: res.data.avatar }));
+        setAvatarPreview(res.data.avatar);
+        setSuccessMsg('Photo updated!');
+        // Update user in localStorage so avatar persists after refresh
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          userObj.avatar = res.data.avatar;
+          localStorage.setItem('user', JSON.stringify(userObj));
+        }
+      } catch (err) {
+        setErrorMsg('Failed to upload avatar');
+      } finally {
+        setUploading(false);
+      }
+    };
+
     const handleSubmit = async e => {
       e.preventDefault();
+      setErrorMsg('');
+      setSuccessMsg('');
       try {
         await api.put('/guide/profile', {
           bio: form.bio,
           languages: [form.language],
           phone: form.phone,
+          price: form.price,
         });
-        // Optionally update user name/phone if backend supports
-        setEdit(false);
-        window.location.reload();
+        setSuccessMsg('Profile updated!');
       } catch (err) {
-        alert('Failed to update profile');
+        setErrorMsg('Failed to update profile');
       }
     };
+
     return (
       <Box sx={{ maxWidth: 600, mx: 'auto', bgcolor: '#fafaf6', p: 4, borderRadius: 4, boxShadow: 2 }}>
         <Typography variant="h4" fontWeight={700} mb={1} sx={{ fontFamily: 'serif' }}>My Profile</Typography>
         <Typography variant="subtitle1" color="text.secondary" mb={3}>
           Manage your account settings and preferences
         </Typography>
+        {successMsg && (
+          <Box mb={2}>
+            <span style={{ color: 'green', fontWeight: 600 }}>{successMsg}</span>
+          </Box>
+        )}
+        {errorMsg && (
+          <Box mb={2}>
+            <span style={{ color: 'red', fontWeight: 600 }}>{errorMsg}</span>
+          </Box>
+        )}
         <form onSubmit={handleSubmit}>
+          <Box mb={2} display="flex" alignItems="center" gap={2}>
+            <img
+              src={avatarPreview ? (avatarPreview.startsWith('http') ? avatarPreview : `http://localhost:3001${avatarPreview}`) : '/avatar.png'}
+              alt="Avatar"
+              style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #ccc' }}
+            />
+            <Button
+              variant="outlined"
+              component="label"
+              disabled={uploading}
+              sx={{ height: 40 }}
+            >
+              {uploading ? 'Uploading...' : 'Change Photo'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                ref={fileInputRef}
+                onChange={handleAvatarChange}
+              />
+            </Button>
+          </Box>
           <Box mb={2}>
             <Typography fontWeight={600} mb={0.5}><ProfileIcon sx={{ mr: 1, verticalAlign: 'middle' }} /> Full Name</Typography>
             <TextField fullWidth name="name" value={form.name} onChange={handleChange} disabled sx={{ bgcolor: '#f8f8f2' }} />
@@ -442,6 +521,10 @@ export default function GuideDashboard() {
           <Box mb={2}>
             <Typography fontWeight={600} mb={0.5}><span role="img" aria-label="language">🌐</span> Preferred Language</Typography>
             <TextField fullWidth name="language" value={form.language} onChange={handleChange} sx={{ bgcolor: '#f8f8f2' }} />
+          </Box>
+          <Box mb={2}>
+            <Typography fontWeight={600} mb={0.5}><span role="img" aria-label="price">💲</span> Price per day (USD)</Typography>
+            <TextField fullWidth name="price" value={form.price} onChange={handleChange} type="number" sx={{ bgcolor: '#f8f8f2' }} />
           </Box>
           <Box mb={2}>
             <Typography fontWeight={600} mb={0.5}><span role="img" aria-label="bio">📝</span> Bio</Typography>

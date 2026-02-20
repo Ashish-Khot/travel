@@ -1,28 +1,18 @@
 import React from 'react';
-import { ErrorBoundary } from './ErrorBoundary';
-import NavigationBar from './layout/NavigationBar';
-import MainLayout from './layout/MainLayout';
+import { Routes, Route } from 'react-router-dom';
 import LandingPage from './home/LandingPage';
-import GuideRegistrationForm from '../src/GuideRegistrationForm';
+import Login from './Login';
+import Register from './Register';
 import './App.css';
 
 function App() {
   return (
-    <ErrorBoundary>
-      <MainLayout>
-        <NavigationBar />
-        <LandingPage />
-      </MainLayout>
-    </ErrorBoundary>
-  );
-}
-
-// Add route for guide registration
-export default function AppRoutes() {
-  return (
     <Routes>
-      {/* ...other routes... */}
-      <Route path="/register/guide" element={<GuideRegistrationForm />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
     </Routes>
   );
 }
+
+export default App;

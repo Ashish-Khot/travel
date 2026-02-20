@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
+// Remove MUI Grid, use CSS grid for more control
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -18,6 +18,22 @@ import Rating from '@mui/material/Rating';
 // Fetch destinations from backend
 
 const categories = ['All', 'Island', 'Mountain', 'City', 'Heritage'];
+const filters = [
+  'All',
+  'Landmark',
+  'Monument',
+  'Nature',
+  'Historic',
+  'Museum',
+  'Park',
+  'Temple',
+  'Beach',
+  'Fort',
+  'Wonder',
+  'Popular',
+  'Heritage Site',
+  'Natural Wonder',
+];
 
 // Haversine formula for distance in km
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -47,6 +63,7 @@ export default function ExploreDestinations() {
   const [search, setSearch] = useState('');
   const [pendingSearch, setPendingSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [filter, setFilter] = useState('All');
   const [rating, setRating] = useState(0);
   const [distance, setDistance] = useState(0); // 0 means no filter
   const [userLocation, setUserLocation] = useState(null);
@@ -72,31 +89,46 @@ export default function ExploreDestinations() {
   }, []);
 
   // Search-triggered web crawling
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setLoading(true);
     setError('');
-    // Search DB
-    fetch('http://localhost:3001/api/destination/destinations')
-      .then(res => res.json())
-      .then(data => {
-        setDestinations(data);
-        // Search crawl
-        fetch(`http://localhost:3001/api/destination/destinations/crawl?search=${encodeURIComponent(pendingSearch)}`)
-          .then(res => res.json())
-          .then(crawlData => {
-            setCrawledDestinations(Array.isArray(crawlData) ? crawlData : []);
-            setSearch(pendingSearch);
-            setLoading(false);
-          })
-          .catch(err => {
-            setError('Failed to load web destinations.');
-            setLoading(false);
-          });
-      })
-      .catch(err => {
-        setError('Failed to load destinations.');
-        setLoading(false);
-      });
+    setSearch(pendingSearch);
+    try {
+      // Fetch from OpenTripMap
+      const res = await fetch(`http://localhost:3001/api/opentripmap/search?query=${encodeURIComponent(pendingSearch)}&limit=12`);
+      const data = await res.json();
+      let places = [];
+      if (data.features) {
+        places = data.features.map(f => {
+          // Wikipedia fallback
+          if (f.properties.kinds === 'Wikipedia') {
+            return {
+              xid: null,
+              name: f.properties.name,
+              lat: null,
+              lon: null,
+              category: 'Wikipedia',
+              image: f.properties.image || '/fallback-destination.jpg',
+              description: f.properties.description || 'No description available.',
+            };
+          }
+          return {
+            xid: f.properties.xid,
+            name: f.properties.name,
+            lat: f.geometry.coordinates[1],
+            lon: f.geometry.coordinates[0],
+            category: f.properties.kinds,
+            image: f.properties.image || '/fallback-destination.jpg',
+            description: f.properties.description || '',
+          };
+        });
+      }
+      setDestinations(places);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load OpenTripMap destinations.');
+      setLoading(false);
+    }
   };
 
   // Get user location for distance filter
@@ -112,6 +144,7 @@ export default function ExploreDestinations() {
   // Filter logic for DB destinations
   const filteredDB = destinations.filter(dest => {
     const matchesCategory = category === 'All' || (dest.category || dest.details?.kinds || '').toLowerCase().includes(category.toLowerCase());
+    const matchesFilter = filter === 'All' || (dest.details?.kinds || dest.category || '').toLowerCase().includes(filter.toLowerCase()) || (dest.details?.tags || []).map(t => t.toLowerCase()).includes(filter.toLowerCase());
     const matchesRating = (dest.rating || 0) >= rating;
     const matchesSearch =
       (dest.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -122,19 +155,20 @@ export default function ExploreDestinations() {
       const d = getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, dest.lat, dest.lon);
       matchesDistance = d <= distance;
     }
-    return matchesCategory && matchesRating && matchesSearch && matchesDistance;
+    return matchesCategory && matchesFilter && matchesRating && matchesSearch && matchesDistance;
   });
 
   // Filter logic for crawled destinations
   const filteredCrawled = crawledDestinations.filter(dest => {
     const matchesCategory = category === 'All' || (dest.category || '').toLowerCase().includes(category.toLowerCase());
+    const matchesFilter = filter === 'All' || (dest.details?.kinds || dest.category || '').toLowerCase().includes(filter.toLowerCase()) || (dest.details?.tags || []).map(t => t.toLowerCase()).includes(filter.toLowerCase());
     const matchesRating = (dest.rating || 0) >= rating;
     let matchesDistance = true;
     if (distance > 0 && userLocation && dest.lat && dest.lon) {
       const d = getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, dest.lat, dest.lon);
       matchesDistance = d <= distance;
     }
-    return matchesCategory && matchesRating && matchesDistance;
+    return matchesCategory && matchesFilter && matchesRating && matchesDistance;
   });
 
   // Merge both
@@ -156,27 +190,49 @@ export default function ExploreDestinations() {
   }
   return (
     <Box>
-      <Typography variant="h4" fontWeight={700} mb={3}>Explore the Destination</Typography>
-      <Box display="flex" gap={2} mb={3} flexWrap="wrap">
+      <Typography variant="h4" fontWeight={700} mb={3} sx={{ fontFamily: 'serif', letterSpacing: '-1px' }}>Explore the Destination</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 2,
+          mb: 4,
+          p: 3,
+          borderRadius: 4,
+          boxShadow: '0 2px 16px 0 rgba(60,72,88,0.08)',
+          bgcolor: '#fff',
+          maxWidth: '1200px',
+          margin: '0 auto',
+        }}
+      >
         <TextField
-          label="Search"
+          label="Search destinations..."
           value={pendingSearch}
           onChange={e => setPendingSearch(e.target.value)}
           InputProps={{
-            startAdornment: <InputAdornment position="start">🔍</InputAdornment>
+            startAdornment: <InputAdornment position="start"><span role="img" aria-label="search">🔍</span></InputAdornment>,
+            sx: { borderRadius: 3, bgcolor: '#f7f7f7' }
           }}
+          sx={{ minWidth: 220, flex: 1 }}
         />
-        <Button variant="contained" color="primary" onClick={handleSearch} sx={{ minWidth: 120 }}>
-          Search
-        </Button>
         <TextField
           select
           label="Category"
           value={category}
           onChange={e => setCategory(e.target.value)}
-          sx={{ minWidth: 120 }}
+          sx={{ minWidth: 140, flex: 1, background: '#f7f7f7', borderRadius: 3 }}
         >
           {categories.map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
+        </TextField>
+        <TextField
+          select
+          label="Filter"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          sx={{ minWidth: 140, flex: 1, background: '#f7f7f7', borderRadius: 3 }}
+        >
+          {filters.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
         </TextField>
         <TextField
           label="Min Rating"
@@ -184,7 +240,7 @@ export default function ExploreDestinations() {
           value={rating}
           onChange={e => setRating(Number(e.target.value))}
           inputProps={{ min: 0, max: 5, step: 0.1 }}
-          sx={{ minWidth: 120 }}
+          sx={{ minWidth: 120, flex: 1, background: '#f7f7f7', borderRadius: 3 }}
         />
         <TextField
           label="Max Distance (km)"
@@ -192,38 +248,110 @@ export default function ExploreDestinations() {
           value={distance}
           onChange={e => setDistance(Number(e.target.value))}
           inputProps={{ min: 0, step: 1 }}
-          sx={{ minWidth: 150 }}
+          sx={{ minWidth: 170, flex: 1, background: '#f7f7f7', borderRadius: 3 }}
           disabled={!userLocation}
           helperText={!userLocation ? 'Enable location for distance filter' : ''}
         />
+        <Button
+          variant="contained"
+          color="success"
+          onClick={handleSearch}
+          sx={{
+            minWidth: 120,
+            px: 4,
+            py: 1.5,
+            fontWeight: 700,
+            fontSize: 18,
+            borderRadius: 3,
+            boxShadow: '0 2px 8px 0 rgba(60,72,88,0.10)',
+            textTransform: 'none',
+            letterSpacing: 0,
+            bgcolor: '#3b7f6a',
+            '&:hover': { bgcolor: '#25614a' },
+          }}
+        >
+          Search
+        </Button>
       </Box>
-      <Grid container spacing={3}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: '1fr 1fr',
+            md: '1fr 1fr 1fr'
+          },
+          gap: 4,
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          mb: 4,
+        }}
+      >
         {filtered.length === 0 ? (
-          <Box width="100%" textAlign="center" py={6}>
+          <Box width="100%" textAlign="center" py={6} gridColumn="1/-1">
             <Typography>No destinations found.</Typography>
           </Box>
         ) : filtered.map(dest => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={dest._id || dest.xid || dest.name}>
-            <Card onClick={() => setSelected(dest)} sx={{ cursor: 'pointer', height: '100%' }}>
-              <CardMedia
-                component="img"
-                height="160"
-                image={dest.image}
-                alt={dest.name}
-              />
-              <CardContent>
-                <Typography variant="h6" fontWeight={700}>{dest.name}</Typography>
-                <Typography variant="body2" color="text.secondary">{dest.details?.kinds || dest.category || ''} • {dest.city || dest.location || ''} {dest.country ? '• ' + dest.country : ''}</Typography>
-                <Typography variant="body2" mt={1}>{dest.description}</Typography>
-                <Box display="flex" alignItems="center" mt={1}>
-                  <Rating value={dest.rating || 0} precision={0.1} readOnly size="small" />
-                  <Typography variant="caption" ml={1}>{dest.rating || 'N/A'}</Typography>
-                </Box>
+          <Box key={dest.xid || dest.name} sx={{ width: '100%', minWidth: 0 }}>
+            <Card
+              onClick={async () => {
+                // Fetch details only when clicked
+                if (dest.xid) {
+                  try {
+                    const detailRes = await fetch(`http://localhost:3001/api/opentripmap/place/${dest.xid}`);
+                    const detail = await detailRes.json();
+                    setSelected({
+                      ...dest,
+                      description: detail.wikipedia_extract || detail.info?.descr || '',
+                      image: detail.preview?.source || '/fallback-destination.jpg',
+                      city: detail.address?.city || '',
+                      country: detail.address?.country || '',
+                      rating: detail.rate || 0,
+                      details: detail.kinds || '',
+                    });
+                  } catch {
+                    setSelected(dest);
+                  }
+                } else {
+                  setSelected(dest);
+                }
+              }}
+              sx={{
+                cursor: 'pointer',
+                height: 370,
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 4,
+                boxShadow: '0 4px 24px 0 rgba(60,72,88,0.10)',
+                transition: 'transform 0.18s, box-shadow 0.18s',
+                '&:hover': {
+                  transform: 'translateY(-6px) scale(1.03)',
+                  boxShadow: '0 8px 32px 0 rgba(60,72,88,0.18)',
+                },
+                overflow: 'hidden',
+                bgcolor: '#fff',
+              }}
+            >
+              <Box sx={{ width: '100%', height: 170, overflow: 'hidden', bgcolor: '#f3f3f3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img
+                  src={dest.image || '/fallback-destination.jpg'}
+                  alt={dest.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: 170, minWidth: '100%' }}
+                  onError={e => { e.target.onerror = null; e.target.src = '/fallback-destination.jpg'; }}
+                />
+              </Box>
+              <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 2 }}>
+                <Typography variant="h6" fontWeight={700} mb={0.5} sx={{ fontFamily: 'serif' }}>{dest.name}</Typography>
+                <Typography variant="body2" color="text.secondary" mb={0.5} sx={{ fontSize: 14 }}>
+                  {(dest.category || '').split(',').join(', ')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mb={1} sx={{ fontSize: 13, minHeight: 36, maxHeight: 36, overflow: 'hidden', textOverflow: 'ellipsis' }}>{dest.description}</Typography>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
       <Box mt={4}>
         <DestinationMap destinations={filtered} center={{ lat: 36.3932, lng: 25.4615 }} zoom={2} />
       </Box>
