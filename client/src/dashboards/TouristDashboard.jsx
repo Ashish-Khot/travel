@@ -21,11 +21,14 @@ import TouristProfile from './components/TouristProfile';
 import TouristSettings from './components/TouristSettings';
 import TouristNotifications from './components/TouristNotifications';
 import CreateTravelogue from './components/CreateTravelogue';
+import MyTravelogues from './components/MyTravelogues';
+import TravelogueSearch from './components/TravelogueSearch';
 import WelcomeSection from './components/WelcomeSection';
 import DashboardMetrics from './components/DashboardMetrics';
 import AIRecommendations from './components/AIRecommendations';
 import WeatherForecastCard from './components/WeatherForecastCard';
 import WeatherSearch from './components/WeatherSearch';
+import { Tabs, Tab } from '@mui/material';
 
 function TouristDashboard() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -33,6 +36,7 @@ function TouristDashboard() {
   const isMobile = useMediaQuery('(max-width:900px)');
   const [selectedTab, setSelectedTab] = useState('Dashboard');
   const [weatherModal, setWeatherModal] = useState(false);
+  const [travelogueSubTab, setTravelogueSubTab] = useState('create');
 
   // Responsive sidebar toggle
   const handleSidebarToggle = () => setSidebarOpen((open) => !open);
@@ -103,7 +107,49 @@ function TouristDashboard() {
           {selectedTab === 'My Bookings' && <MyBookings />}
           {selectedTab === 'Chat' && <ChatPanel />}
           {selectedTab === 'Reviews' && <ReviewsPanel />}
-          {selectedTab === 'Travelogue' && <CreateTravelogue />}
+          {selectedTab === 'Travelogue' && (
+            <Box>
+              {/* Travelogue Sub-tabs */}
+              <Box sx={{
+                bgcolor: '#ffffff',
+                borderRadius: '16px',
+                mb: 3,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                overflow: 'hidden'
+              }}>
+                <Tabs
+                  value={travelogueSubTab}
+                  onChange={(e, newValue) => setTravelogueSubTab(newValue)}
+                  sx={{
+                    borderBottom: '1px solid rgba(79,138,139,0.1)',
+                    '& .MuiTab-root': {
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#6B7280',
+                      minWidth: 120,
+                      '&.Mui-selected': {
+                        color: '#4F8A8B'
+                      }
+                    },
+                    '& .MuiTabs-indicator': {
+                      background: 'linear-gradient(135deg, #4F8A8B 0%, #6BA8AC 100%)',
+                      height: 3
+                    }
+                  }}
+                >
+                  <Tab value="create" label="Create Travelogue" />
+                  <Tab value="my" label="My Travelogues" />
+                  <Tab value="explore" label="Explore Stories" />
+                </Tabs>
+              </Box>
+
+              {/* Sub-tab Content */}
+              {travelogueSubTab === 'create' && <CreateTravelogue />}
+              {travelogueSubTab === 'my' && <MyTravelogues />}
+              {travelogueSubTab === 'explore' && <TravelogueSearch />}
+            </Box>
+          )}
           {selectedTab === 'Travel Tips' && <TravelTipsPanel />}
           {selectedTab === 'Emergency' && <EmergencySupportPanel />}
           {selectedTab === 'Profile' && <TouristProfile user={user} />}
