@@ -1,82 +1,129 @@
-
 const express = require('express');
-const Tourist = require('../models/Tourist');
-const { verifyToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const User = require('../models/User');
+const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Set up multer for avatar uploads
+/* ===============================
+   MULTER CONFIG (Avatar Upload)
+================================= */
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(__dirname, '../uploads/avatars'));
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+  },
 });
 const upload = multer({ storage });
 
-// Avatar upload endpoint
-router.post('/avatar/:userId', verifyToken, upload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-    // Update avatar in Tourist collection
-    const tourist = await Tourist.findOneAndUpdate(
-      { userId: req.params.userId },
-      { avatar: avatarUrl },
-      { new: true, upsert: true }
-    );
-    res.json({ avatar: avatarUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get tourist profile (by userId)
+/* ===============================
+   GET TOURIST PROFILE BY USER ID
+================================= */
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
-    const tourist = await Tourist.findOne({ userId: req.params.userId });
-    if (!tourist) return res.status(404).json({ error: 'Tourist profile not found' });
-    res.json(tourist);
+    const user = await User.findById(req.params.userId);
+
+    if (!user || user.role !== 'tourist') {
+      return res.status(404).json({ error: 'Tourist profile not found' });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      fullName: user.fullName || user.name,
+      dob: user.dob,
+      gender: user.gender,
+      language: user.language,
+      nationality: user.nationality || user.country,
+      country: user.country,
+      interests: user.interests,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create or update tourist profile
+/* ===============================
+   UPDATE TOURIST PROFILE
+================================= */
 router.put('/:userId', verifyToken, async (req, res) => {
   try {
-    // Remove any duplicate entries for this userId except the first one
-    const allTourists = await Tourist.find({ userId: req.params.userId });
-    if (allTourists.length > 1) {
-      // Keep the first, remove the rest
-      const idsToRemove = allTourists.slice(1).map(t => t._id);
-      await Tourist.deleteMany({ _id: { $in: idsToRemove } });
-    }
-    const update = {
-      fullName: req.body.fullName,
-      avatar: req.body.avatar,
-      dob: req.body.dob,
-      gender: req.body.gender,
-      language: req.body.language,
-      nationality: req.body.nationality,
-      interests: req.body.interests,
-      phone: req.body.phone,
-      userId: req.params.userId
-    };
-    const tourist = await Tourist.findOneAndUpdate(
-      { userId: req.params.userId },
-      update,
-      { new: true, upsert: true }
+    const { fullName, phone, dob, gender, language, nationality, interests } = req.body;
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId, role: 'tourist' },
+      {
+        fullName: fullName || req.body.fullName,
+        phone: phone || req.body.phone,
+        dob: dob || req.body.dob,
+        gender: gender || req.body.gender,
+        language: language || req.body.language,
+        nationality: nationality || req.body.nationality,
+        interests: interests || req.body.interests,
+      },
+      { new: true }
     );
-    res.json(tourist);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Tourist not found' });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      fullName: user.fullName || user.name,
+      dob: user.dob,
+      gender: user.gender,
+      language: user.language,
+      nationality: user.nationality || user.country,
+      country: user.country,
+      interests: user.interests,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* ===============================
+   UPDATE AVATAR
+================================= */
+router.post(
+  '/avatar/:userId',
+  verifyToken,
+  upload.single('avatar'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+      const user = await User.findOneAndUpdate(
+        { _id: req.params.userId, role: 'tourist' },
+        { avatar: avatarUrl },
+        { new: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({ error: 'Tourist not found' });
+      }
+
+      res.json({ avatar: avatarUrl });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 module.exports = router;

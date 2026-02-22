@@ -15,6 +15,14 @@ const UserSchema = new mongoose.Schema({
   },
   avatar: { type: String, default: "" },
   isVerified: { type: Boolean, default: false },
+  
+  // Tourist profile fields
+  fullName: { type: String, default: "" },
+  dob: { type: String, default: "" },
+  gender: { type: String, default: "" },
+  language: { type: String, default: "" },
+  nationality: { type: String, default: "" },
+  
   // For hotel users: array of image URLs (uploaded or external)
   hotelImages: [{ type: String, default: [] }],
   // For hotel users: address and amenities

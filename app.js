@@ -20,18 +20,13 @@ const hotelRouter = require('./routes/hotel');
 const hotelProfileRouter = require('./routes/hotelProfile');
 const adminTravelogueRouter = require('./routes/adminTravelogue');
 
-const touristProfileRouter = require('./routes/touristProfile');
 const touristRouter = require('./routes/tourist');
-const touristAvatarRouter = require('./routes/touristAvatar');
-
 const guideAvatarRouter = require('./routes/guideAvatar');
 const opentripmapRouter = require('./routes/opentripmap');
 const hotelProfileInfoRouter = require('./routes/hotelProfileInfo');
 
-
 const path = require('path');
 const app = express();
-
 
 connectDB();
 
@@ -40,43 +35,48 @@ app.use(cors({
   credentials: true
 }));
 
-
 app.use(express.json({ limit: '2mb' }));
 
-// Serve uploaded travelogue media statically
+// Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
-app.use('/api/touristAvatar', touristAvatarRouter); // Tourist avatar upload endpoint
-app.use('/api/guideAvatar', guideAvatarRouter); // Guide avatar upload endpoint
 
-
+// ===== API ROUTES =====
 app.use("/api", authRouter);
-app.use('/api/admin', adminUserRouter); // Admin user management
 
-app.use('/api/guide/profile', guideProfileRouter); // Authenticated guide profile routes (GET/PUT)
-app.use('/api/guide', guideRouter); // Public guide routes (GET by userId, etc)
-app.use('/api/booking', bookingRouter); // Booking routes
-app.use('/api/adminGuide', adminGuideRouter); // Admin guide approval/rejection
-app.use('/api/chat', chatRoutes); // Chat API routes
-app.use('/api/notifications', notificationsRoutes); // Notifications API routes
+// Admin routes
+app.use('/api/admin', adminUserRouter);
+app.use('/api/adminDashboard', adminDashboardRouter);
+app.use('/api/adminGuide', adminGuideRouter);
+app.use('/api/adminTravelogue', adminTravelogueRouter);
 
-app.use('/api/adminDashboard', adminDashboardRouter); // Admin dashboard stats
-app.use('/api/travelogue', travelogueRouter); // Travelogue endpoints
-app.use('/api/adminTravelogue', adminTravelogueRouter); // Admin travelogue actions
-app.use('/api/destination', destinationRouter); // Destination endpoints
+// Guide routes
+app.use('/api/guide/profile', guideProfileRouter);
+app.use('/api/guide', guideRouter);
+app.use('/api/guideAvatar', guideAvatarRouter);
 
-app.use('/api/hotel', hotelRouter); // New hotel profile endpoints (separate collection)
-app.use('/api/hotelProfile', hotelProfileRouter); // (legacy, for migration)
+// Tourist routes (consolidated)
+app.use('/api/tourist', touristRouter); // GET /:userId, PUT /:userId, POST /avatar/:userId
 
-app.use('/api/touristProfile', touristProfileRouter); // (legacy, for migration)
-app.use('/api/tourist', touristRouter); // New tourist profile endpoints
+// Booking & Chat
+app.use('/api/booking', bookingRouter);
+app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
-app.use('/api/opentripmap', opentripmapRouter); // OpenTripMap API integration
-app.use('/api/hotelProfileInfo', hotelProfileInfoRouter); // (legacy, for migration)
+// Content routes
+app.use('/api/travelogue', travelogueRouter);
+app.use('/api/destination', destinationRouter);
 
-app.use('/api/room', roomRouter); // Hotel room endpoints
+// Hotel routes
+app.use('/api/hotel', hotelRouter);
+app.use('/api/hotelProfile', hotelProfileRouter);
+app.use('/api/hotelProfileInfo', hotelProfileInfoRouter);
 
+// Other integrations
+app.use('/api/opentripmap', opentripmapRouter);
+app.use('/api/room', roomRouter);
+
+// Health check
 app.get("/", (req, res) => {
   res.send("API is running");
 });
